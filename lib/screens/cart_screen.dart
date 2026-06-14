@@ -12,6 +12,7 @@ class CartScreen extends StatefulWidget {
 class _CartScreenState extends State<CartScreen> {
   List<dynamic> _items = [];
   bool _loading = true;
+  bool _checkingOut = false;
 
   @override
   void initState() {
@@ -34,6 +35,52 @@ class _CartScreenState extends State<CartScreen> {
       }
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _checkout() async {
+    setState(() => _checkingOut = true);
+    try {
+      await ApiService.placeOrder();
+      if (!mounted) return;
+      setState(() {
+        _items = [];
+        _checkingOut = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Order placed successfully!'),
+          backgroundColor: AppColors.amberGlow,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+      Navigator.pop(context);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _checkingOut = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          backgroundColor: AppColors.red,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _checkingOut = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Checkout failed'),
+          backgroundColor: AppColors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -439,27 +486,43 @@ class _CartScreenState extends State<CartScreen> {
             height: 52,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
-              gradient: const LinearGradient(
-                colors: [AppColors.blazeOrange, AppColors.amberGlow],
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.blazeOrange.withValues(alpha: 0.4),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+              gradient: _checkingOut
+                  ? null
+                  : const LinearGradient(
+                      colors: [AppColors.blazeOrange, AppColors.amberGlow],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
+              color: _checkingOut
+                  ? Colors.white.withValues(alpha: 0.1)
+                  : null,
+              boxShadow: _checkingOut
+                  ? []
+                  : [
+                      BoxShadow(
+                        color: AppColors.blazeOrange.withValues(alpha: 0.4),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
             ),
             child: Material(
               color: Colors.transparent,
               child: InkWell(
                 borderRadius: BorderRadius.circular(16),
-                onTap: () {},
-                child: const Center(
-                  child: Text(
-                    'Checkout',
+                onTap: _checkingOut ? null : _checkout,
+                child: Center(
+                  child: _checkingOut
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Checkout',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 16,

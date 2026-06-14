@@ -20,10 +20,13 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _loading = true;
   final _searchController = TextEditingController();
 
+  int _cartCount = 0;
+
   @override
   void initState() {
     super.initState();
     _loadData();
+    _fetchCartCount();
   }
 
   @override
@@ -90,8 +93,22 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _openCart() {
-    Navigator.of(context).push(
+  void _openProduct(Map<String, dynamic> product) async {
+    final id = product['id'] as int?;
+    if (id == null) return;
+    await Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (_, _, _) => ProductDetailsScreen(productId: id),
+        transitionsBuilder: (_, a, _, child) =>
+            FadeTransition(opacity: a, child: child),
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    );
+    _fetchCartCount();
+  }
+
+  void _openCart() async {
+    await Navigator.of(context).push(
       PageRouteBuilder(
         pageBuilder: (_, _, _) => const CartScreen(),
         transitionsBuilder: (_, a, _, child) =>
@@ -99,6 +116,14 @@ class _HomeScreenState extends State<HomeScreen> {
         transitionDuration: const Duration(milliseconds: 300),
       ),
     );
+    _fetchCartCount();
+  }
+
+  Future<void> _fetchCartCount() async {
+    try {
+      final items = await ApiService.getCart();
+      if (mounted) setState(() => _cartCount = items.length);
+    } catch (_) {}
   }
 
   @override
@@ -187,10 +212,59 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const Spacer(),
-          _buildIconButton(Icons.shopping_cart_outlined, _openCart),
+          _buildCartButton(),
           const SizedBox(width: 8),
           _buildIconButton(Icons.logout_rounded, _logout),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCartButton() {
+    return GestureDetector(
+      onTap: _openCart,
+      child: Container(
+        width: 42,
+        height: 42,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(13),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            const Center(
+              child: Icon(Icons.shopping_cart_outlined,
+                  color: AppColors.textSecondary, size: 20),
+            ),
+            if (_cartCount > 0)
+              Positioned(
+                top: -4,
+                right: -4,
+                child: Container(
+                  width: 18,
+                  height: 18,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [AppColors.blazeOrange, AppColors.amberGlow],
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      _cartCount > 9 ? '9+' : '$_cartCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -354,18 +428,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final category = product['category'] as Map<String, dynamic>?;
 
     return GestureDetector(
-      onTap: () {
-        final id = product['id'] as int?;
-        if (id == null) return;
-        Navigator.of(context).push(
-          PageRouteBuilder(
-            pageBuilder: (_, _, _) => ProductDetailsScreen(productId: id),
-            transitionsBuilder: (_, a, _, child) =>
-                FadeTransition(opacity: a, child: child),
-            transitionDuration: const Duration(milliseconds: 300),
-          ),
-        );
-      },
+      onTap: () => _openProduct(product),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.05),

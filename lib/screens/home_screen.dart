@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_learn2/services/api_service.dart';
 import 'package:flutter_learn2/theme/app_colors.dart';
 import 'package:flutter_learn2/screens/login_screen.dart';
+import 'package:flutter_learn2/screens/cart_screen.dart';
 import 'package:flutter_learn2/screens/product_details_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -86,6 +87,17 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,
+    );
+  }
+
+  void _openCart() {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (_, _, _) => const CartScreen(),
+        transitionsBuilder: (_, a, _, child) =>
+            FadeTransition(opacity: a, child: child),
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
     );
   }
 
@@ -175,7 +187,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const Spacer(),
-          _buildIconButton(Icons.shopping_cart_outlined, () {}),
+          _buildIconButton(Icons.shopping_cart_outlined, _openCart),
           const SizedBox(width: 8),
           _buildIconButton(Icons.logout_rounded, _logout),
         ],

@@ -41,9 +41,10 @@ class ApiService {
       body: jsonEncode(body),
     );
 
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final decoded = jsonDecode(response.body);
 
     if (response.statusCode >= 400) {
+      final data = decoded as Map<String, dynamic>;
       throw ApiException(
         message: _extractErrorMessage(data),
         statusCode: response.statusCode,
@@ -51,7 +52,7 @@ class ApiService {
       );
     }
 
-    return data;
+    return decoded as Map<String, dynamic>;
   }
 
   static Future<Map<String, dynamic>> get(String endpoint) async {
@@ -60,16 +61,79 @@ class ApiService {
       headers: _headers,
     );
 
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final decoded = jsonDecode(response.body);
 
     if (response.statusCode >= 400) {
+      final data = decoded as Map<String, dynamic>;
       throw ApiException(
         message: _extractErrorMessage(data),
         statusCode: response.statusCode,
       );
     }
 
-    return data;
+    return decoded as Map<String, dynamic>;
+  }
+
+  static Future<List<dynamic>> getList(String endpoint) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl$endpoint'),
+      headers: _headers,
+    );
+
+    final decoded = jsonDecode(response.body);
+
+    if (response.statusCode >= 400) {
+      if (decoded is Map) {
+        throw ApiException(
+          message: _extractErrorMessage(decoded as Map<String, dynamic>),
+          statusCode: response.statusCode,
+        );
+      }
+      throw ApiException(message: 'Request failed', statusCode: response.statusCode);
+    }
+
+    return decoded as List<dynamic>;
+  }
+
+  static Future<Map<String, dynamic>> patch(
+    String endpoint,
+    Map<String, dynamic> body,
+  ) async {
+    final response = await http.patch(
+      Uri.parse('$baseUrl$endpoint'),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+
+    if (response.statusCode >= 400) {
+      throw ApiException(
+        message: _extractErrorMessage(decoded),
+        statusCode: response.statusCode,
+        errors: decoded['errors'] as Map<String, dynamic>?,
+      );
+    }
+
+    return decoded;
+  }
+
+  static Future<Map<String, dynamic>> delete(String endpoint) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl$endpoint'),
+      headers: _headers,
+    );
+
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+
+    if (response.statusCode >= 400) {
+      throw ApiException(
+        message: _extractErrorMessage(decoded),
+        statusCode: response.statusCode,
+      );
+    }
+
+    return decoded;
   }
 
   static String _extractErrorMessage(Map<String, dynamic> data) {
@@ -84,7 +148,7 @@ class ApiService {
     return 'Something went wrong';
   }
 
-  // ─── Auth helpers ──────────────────────────────────────────
+  // ─── Auth ──────────────────────────────────────────────────
 
   static Future<Map<String, dynamic>> register({
     required String name,
@@ -130,6 +194,78 @@ class ApiService {
   }
 
   static bool get isLoggedIn => _token != null && _token!.isNotEmpty;
+
+  static String imageUrl(String? path) {
+    if (path == null || path.isEmpty) return '';
+    return path;
+  }
+
+  // ─── Categories ────────────────────────────────────────────
+
+  static Future<List<dynamic>> getCategories() async {
+    return getList('/categories');
+  }
+
+  static Future<Map<String, dynamic>> getCategory(int id) async {
+    return get('/categories/$id');
+  }
+
+  // ─── Products ──────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getProducts({
+    int? categoryId,
+    String? search,
+    int page = 1,
+  }) async {
+    final params = <String, String>{'page': page.toString()};
+    if (categoryId != null) params['category_id'] = categoryId.toString();
+    if (search != null && search.isNotEmpty) params['search'] = search;
+
+    final query = params.entries.map((e) => '${e.key}=${e.value}').join('&');
+    return get('/products?$query');
+  }
+
+  static Future<Map<String, dynamic>> getProduct(int id) async {
+    return get('/products/$id');
+  }
+
+  // ─── Cart ──────────────────────────────────────────────────
+
+  static Future<List<dynamic>> getCart() async {
+    return getList('/cart');
+  }
+
+  static Future<Map<String, dynamic>> addToCart({
+    required int productId,
+    required int quantity,
+  }) async {
+    return post('/cart', {'product_id': productId, 'quantity': quantity});
+  }
+
+  static Future<Map<String, dynamic>> updateCartItem(
+    int cartItemId,
+    int quantity,
+  ) async {
+    return patch('/cart/$cartItemId', {'quantity': quantity});
+  }
+
+  static Future<Map<String, dynamic>> removeFromCart(int cartItemId) async {
+    return delete('/cart/$cartItemId');
+  }
+
+  // ─── Orders ────────────────────────────────────────────────
+
+  static Future<List<dynamic>> getOrders() async {
+    return getList('/orders');
+  }
+
+  static Future<Map<String, dynamic>> placeOrder() async {
+    return post('/orders', {});
+  }
+
+  static Future<Map<String, dynamic>> getOrder(int id) async {
+    return get('/orders/$id');
+  }
 }
 
 class ApiException implements Exception {

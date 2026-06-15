@@ -4,6 +4,8 @@ import 'package:flutter_learn2/providers/cart_provider.dart';
 import 'package:flutter_learn2/services/api_service.dart';
 import 'package:flutter_learn2/theme/app_colors.dart';
 
+/// Full product detail screen with image, price, description, quantity selector, and add-to-cart button.
+/// Receives a [productId] and fetches the product from the API.
 class ProductDetailsScreen extends StatefulWidget {
   final int productId;
 
@@ -19,12 +21,15 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
   bool _loading = true;
   int _quantity = 1;
   bool _addingToCart = false;
+
+  // Fade-in entrance animation
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
 
   @override
   void initState() {
     super.initState();
+    // Set up fade-in entrance animation
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -41,6 +46,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
     super.dispose();
   }
 
+  /// Fetches product data from the API by [widget.productId].
+  /// On error, shows a snackbar and pops back to the previous screen.
   Future<void> _fetchProduct() async {
     try {
       final data = await ApiService.getProduct(widget.productId);
@@ -60,6 +67,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
     }
   }
 
+  /// Adds the current product and selected quantity to the cart via CartProvider.
+  /// Handles ApiException with a specific error message snackbar.
   Future<void> _addToCart() async {
     setState(() => _addingToCart = true);
     try {
@@ -141,6 +150,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
     );
   }
 
+  /// Top bar with back button and share icon (share is a no-op placeholder).
   Widget _buildTopBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -154,6 +164,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
     );
   }
 
+  /// Frosted-glass back button that pops the current screen.
   Widget _buildBackButton() {
     return Container(
       width: 44,
@@ -175,6 +186,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
     );
   }
 
+  /// Reusable frosted-glass icon button.
   Widget _buildIconButton(IconData icon, VoidCallback onTap) {
     return Container(
       width: 44,
@@ -195,6 +207,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
     );
   }
 
+  /// Product image container with stock badge and category badge overlays.
   Widget _buildImageSection() {
     final image = _product?['image'] as String?;
     final stock = _product?['stock'] as int? ?? 0;
@@ -266,6 +279,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
     );
   }
 
+  /// Small colored badge chip used for stock status and category label.
   Widget _buildBadge(String text, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -282,6 +296,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
     );
   }
 
+  /// Gradient-styled price, unit label ("per piece"), product name, and description.
   Widget _buildProductInfo() {
     final name = _product?['name'] as String? ?? '';
     final price =
@@ -340,6 +355,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
     );
   }
 
+  /// Sticky bottom bar with quantity selector and gradient add-to-cart button.
+  /// Disabled state shown when the item is out of stock or while adding.
   Widget _buildBottomBar() {
     final stock = _product?['stock'] as int? ?? 0;
     final isOutOfStock = stock <= 0;
@@ -437,6 +454,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
     );
   }
 
+  /// +/- quantity selector with frosted-glass styling.
   Widget _buildQuantitySelector() {
     return Container(
       height: 52,
@@ -472,6 +490,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
     );
   }
 
+  /// Single quantity button (+ or -). Dimmed when disabled (e.g. cannot go below 1).
   Widget _quantityButton(IconData icon, VoidCallback? onTap) {
     return Material(
       color: Colors.transparent,

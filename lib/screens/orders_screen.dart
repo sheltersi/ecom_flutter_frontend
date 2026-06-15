@@ -3,6 +3,8 @@ import 'package:flutter_learn2/services/api_service.dart';
 import 'package:flutter_learn2/theme/app_colors.dart';
 import 'package:flutter_learn2/screens/order_detail_screen.dart';
 
+/// Displays a scrollable list of past orders. Each card shows the order ID, status badge,
+/// up to 3 product previews, date, and total. Tapping a card opens the order detail screen.
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
 
@@ -20,6 +22,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
     _fetchOrders();
   }
 
+  /// Fetches all orders from the API. Shows a red snackbar on failure.
   Future<void> _fetchOrders() async {
     try {
       final orders = await ApiService.getOrders();
@@ -74,6 +77,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
     );
   }
 
+  /// Top bar with back button and gradient "My Orders" title.
   Widget _buildTopBar() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 20, 16),
@@ -100,6 +104,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
     );
   }
 
+  /// Frosted-glass back button that pops the current screen.
   Widget _buildBackButton() {
     return Container(
       width: 44,
@@ -121,6 +126,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
     );
   }
 
+  /// Empty state with icon and message shown when there are no orders.
   Widget _buildEmpty() {
     return Center(
       child: Column(
@@ -162,6 +168,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
     );
   }
 
+  /// Scrollable list of order cards with separators.
   Widget _buildOrdersList() {
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -171,6 +178,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
     );
   }
 
+  /// Tappable order summary card: order ID, colored status badge, first 3 item previews, date, and gradient total.
   Widget _buildOrderCard(dynamic order) {
     final id = order['id'] as int? ?? 0;
     final total = double.tryParse(order['total']?.toString() ?? '0') ?? 0;
@@ -332,6 +340,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
     );
   }
 
+  /// Converts an ISO-8601 string to a readable format like "14 Jun 2025".
   String _formatDate(String iso) {
     try {
       final dt = DateTime.parse(iso);

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_learn2/services/api_service.dart';
 import 'package:flutter_learn2/theme/app_colors.dart';
 
+/// Detailed view of a single order: status card, item list with line totals, and an order summary section.
+/// Receives an [orderId] and fetches the order from the API.
 class OrderDetailScreen extends StatefulWidget {
   final int orderId;
 
@@ -21,6 +23,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     _fetchOrder();
   }
 
+  /// Fetches a single order by [widget.orderId]. On error, shows a snackbar and pops back.
   Future<void> _fetchOrder() async {
     try {
       final order = await ApiService.getOrder(widget.orderId);
@@ -87,6 +90,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
+  /// Top bar with back button and "Order #ID" title.
   Widget _buildTopBar() {
     final id = _order?['id'] as int? ?? widget.orderId;
     return Padding(
@@ -108,6 +112,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
+  /// Frosted-glass back button that pops the current screen.
   Widget _backButton() {
     return Container(
       width: 44,
@@ -129,6 +134,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
+  /// Status card showing a colored icon circle, the capitalized status text, and the formatted date.
   Widget _buildStatusCard() {
     final status = _order?['status'] as String? ?? 'pending';
     final createdAt = _order?['created_at'] as String? ?? '';
@@ -195,6 +201,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
+  /// List of ordered items: image, name, unit price, quantity, and line total.
   Widget _buildItemsList() {
     final items = (_order?['items'] as List<dynamic>?) ?? [];
 
@@ -310,6 +317,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
+  /// Order summary section: subtotal (with item count), free delivery, divider, and gradient total.
   Widget _buildSummaryCard() {
     final total =
         double.tryParse(_order?['total']?.toString() ?? '0') ?? 0;
@@ -368,6 +376,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
+  /// A single row in the summary card (label left, value right).
   Widget _summaryRow(String label, String value) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -384,6 +393,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
+  /// Converts an ISO-8601 string to a readable format like "14 Jun 2025 at 14:30".
   String _formatDate(String iso) {
     try {
       final dt = DateTime.parse(iso);

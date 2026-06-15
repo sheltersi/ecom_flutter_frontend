@@ -9,6 +9,8 @@ import 'package:flutter_learn2/screens/cart_screen.dart';
 import 'package:flutter_learn2/screens/orders_screen.dart';
 import 'package:flutter_learn2/screens/product_details_screen.dart';
 
+/// Main product browsing screen with category chips, search bar, and a 2-column product grid.
+/// Also provides access to cart, orders, and logout via the top bar.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -19,7 +21,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> _categories = [];
   List<dynamic> _products = [];
-  int? _selectedCategoryId;
+  int? _selectedCategoryId; // null means "All"
   bool _loading = true;
   final _searchController = TextEditingController();
 
@@ -36,6 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  /// Loads categories and products in parallel. On failure, logs out and returns to login.
   Future<void> _loadData() async {
     try {
       final results = await Future.wait([
@@ -62,6 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// Fetches products optionally filtered by category or search term.
   Future<void> _fetchProducts({int? categoryId, String? search}) async {
     final data = await ApiService.getProducts(
       categoryId: categoryId,
@@ -74,17 +78,20 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// Filters products by category when a chip is tapped.
   void _onCategoryTap(int? categoryId) {
     setState(() => _selectedCategoryId = categoryId);
     _searchController.clear();
     _fetchProducts(categoryId: categoryId);
   }
 
+  /// Searches products when the user submits a query in the search bar.
   void _onSearchSubmitted(String query) {
     setState(() => _selectedCategoryId = null);
     _fetchProducts(search: query);
   }
 
+  /// Logs out the user and clears the navigation stack back to LoginScreen.
   void _logout() {
     context.read<AuthProvider>().logout();
     Navigator.of(context).pushAndRemoveUntil(
@@ -93,6 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Navigates to the product details screen with a fade transition.
   void _openProduct(Map<String, dynamic> product) async {
     final id = product['id'] as int?;
     if (id == null) return;
@@ -106,6 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Opens the cart screen with a fade transition.
   void _openCart() async {
     await Navigator.of(context).push(
       PageRouteBuilder(
@@ -117,6 +126,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Opens the orders history screen with a fade transition.
   void _openOrders() {
     Navigator.of(context).push(
       PageRouteBuilder(
@@ -169,6 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Top bar with app logo, greeting, orders button, cart badge, and logout button.
   Widget _buildTopBar(Map<String, dynamic>? user, int cartCount) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -223,6 +234,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Cart icon button with a badge showing the item count.
   Widget _buildCartButton(int count) {
     return GestureDetector(
       onTap: _openCart,
@@ -272,6 +284,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Reusable frosted-glass icon button.
   Widget _buildIconButton(IconData icon, VoidCallback onTap) {
     return Container(
       width: 42,
@@ -292,6 +305,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Search text field with a clear button that appears when text is entered.
   Widget _buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -332,6 +346,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Horizontally scrolling row of category filter chips (first chip is "All").
   Widget _buildCategoryChips() {
     return SizedBox(
       height: 42,
@@ -350,6 +365,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Single category chip with animated gradient selection style.
   Widget _buildChip(String label, int? categoryId) {
     final isSelected = categoryId == null && _selectedCategoryId == null ||
         categoryId != null && categoryId == _selectedCategoryId;
@@ -395,6 +411,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// 2-column grid of product cards, or a "No products found" message when empty.
   Widget _buildProductGrid() {
     if (_products.isEmpty) {
       return Center(
@@ -420,6 +437,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Individual product card with image, category label, name, and gradient-colored price.
   Widget _buildProductCard(Map<String, dynamic> product) {
     final name = product['name'] as String? ?? '';
     final price =

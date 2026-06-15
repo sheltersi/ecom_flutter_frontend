@@ -6,6 +6,7 @@ import 'package:flutter_learn2/theme/app_colors.dart';
 import 'package:flutter_learn2/screens/register_screen.dart';
 import 'package:flutter_learn2/screens/home_screen.dart';
 
+/// Login screen with email/password form, fade+slide entrance animation, and a custom radial-gradient background.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -15,10 +16,15 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
+  // Form controllers
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+
+  // Toggle password visibility
   bool _obscurePassword = true;
+
+  // Entrance animations (fade + slide up)
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -26,6 +32,7 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
+    // Set up fade-in + slide-up entrance animation
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -56,6 +63,7 @@ class _LoginScreenState extends State<LoginScreen>
     setState(() => _obscurePassword = !_obscurePassword);
   }
 
+  /// Validates the form, calls the AuthProvider to log in, then navigates to HomeScreen on success.
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -67,6 +75,7 @@ class _LoginScreenState extends State<LoginScreen>
 
       if (!mounted) return;
 
+      // Clear navigation stack and go to home
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const HomeScreen()),
         (route) => false,
@@ -80,6 +89,7 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
+  /// Displays a floating red snackbar with the given error message.
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -141,12 +151,14 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
+  /// Renders the custom radial-gradient background behind the content.
   Widget _buildAnimatedBackground() {
     return Positioned.fill(
       child: CustomPaint(painter: _BackgroundPainter()),
     );
   }
 
+  /// App icon, "Welcome Back" title, and subtitle.
   Widget _buildHeader() {
     return Column(
       children: [
@@ -199,6 +211,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
+  /// Semi-transparent card containing the email/password form and login button.
   Widget _buildLoginCard(bool loading) {
     return Container(
       padding: const EdgeInsets.all(28),
@@ -231,6 +244,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
+  /// Email input field with validation.
   Widget _buildEmailField() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -257,6 +271,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
+  /// Password input field with visibility toggle and validation.
   Widget _buildPasswordField() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -294,6 +309,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
+  /// Shared input decoration used by email and password fields.
   InputDecoration _inputDecoration({
     required String hint,
     required IconData prefixIcon,
@@ -333,6 +349,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
+  /// "Forgot Password?" link (currently a no-op placeholder).
   Widget _buildForgotPassword() {
     return Align(
       alignment: Alignment.centerRight,
@@ -352,6 +369,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
+  /// Gradient "Sign In" button that shows a spinner while loading.
   Widget _buildLoginButton(bool loading) {
     return Container(
       height: 54,
@@ -399,6 +417,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
+  /// "Don't have an account? Sign Up" link that navigates to RegisterScreen.
   Widget _buildRegisterLink() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -428,6 +447,7 @@ class _LoginScreenState extends State<LoginScreen>
   }
 }
 
+/// Draws overlapping radial gradient circles for the login screen's background effect.
 class _BackgroundPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {

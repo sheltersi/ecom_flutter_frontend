@@ -4,6 +4,7 @@ import 'package:flutter_learn2/providers/cart_provider.dart';
 import 'package:flutter_learn2/services/api_service.dart';
 import 'package:flutter_learn2/theme/app_colors.dart';
 
+/// Shopping cart screen displaying cart items with quantity controls, remove buttons, totals, and a checkout action.
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
 
@@ -12,7 +13,7 @@ class CartScreen extends StatefulWidget {
 }
 
 class _CartScreenState extends State<CartScreen> {
-  bool _checkingOut = false;
+  bool _checkingOut = false; // Tracks checkout progress
 
   @override
   void initState() {
@@ -20,6 +21,7 @@ class _CartScreenState extends State<CartScreen> {
     context.read<CartProvider>().fetchCart();
   }
 
+  /// Calls CartProvider.placeOrder(), shows success snackbar, and pops back on completion.
   Future<void> _checkout() async {
     setState(() => _checkingOut = true);
     try {
@@ -100,6 +102,7 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
+  /// Top bar with back button, gradient "My Cart" title, and item count.
   Widget _buildTopBar(int itemCount) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -132,6 +135,7 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
+  /// Frosted-glass back button that pops the current screen.
   Widget _buildBackButton() {
     return Container(
       width: 44,
@@ -153,6 +157,7 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
+  /// Empty state with icon and message shown when the cart has no items.
   Widget _buildEmptyCart() {
     return Center(
       child: Column(
@@ -190,6 +195,7 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
+  /// Scrollable list of cart items with separators.
   Widget _buildCartList(List<dynamic> items) {
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -199,6 +205,7 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
+  /// Single cart item row: image, name, gradient price, quantity controls, and remove button.
   Widget _buildCartItem(dynamic item) {
     final cartItemId = item['id'] as int;
     final product = item['product'] as Map<String, dynamic>? ?? {};
@@ -300,6 +307,7 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
+  /// Compact +/- quantity control for a cart item.
   Widget _buildQuantityControls(int cartItemId, int quantity) {
     final cart = context.read<CartProvider>();
 
@@ -339,6 +347,7 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
+  /// Small +/- button used inside the quantity control row.
   Widget _smallButton(IconData icon, VoidCallback? onTap) {
     return Material(
       color: Colors.transparent,
@@ -361,6 +370,7 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
+  /// Red-styled delete button that calls CartProvider.removeItem.
   Widget _buildRemoveButton(int cartItemId) {
     return Container(
       width: 36,
@@ -386,6 +396,7 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
+  /// Sticky bottom bar showing total price and gradient "Checkout" button.
   Widget _buildBottomBar(double total) {
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),

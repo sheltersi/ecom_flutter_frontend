@@ -5,6 +5,8 @@ import 'package:flutter_learn2/services/api_service.dart';
 import 'package:flutter_learn2/theme/app_colors.dart';
 import 'package:flutter_learn2/screens/home_screen.dart';
 
+/// Registration screen with name, email, password, and confirm-password fields,
+/// fade+slide entrance animation, and a custom radial-gradient background.
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -14,13 +16,18 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen>
     with SingleTickerProviderStateMixin {
+  // Form controllers
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+
+  // Toggle password visibility for both password fields
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
+
+  // Entrance animations (fade + slide up)
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -28,6 +35,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   @override
   void initState() {
     super.initState();
+    // Set up fade-in + slide-up entrance animation
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -52,6 +60,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     super.dispose();
   }
 
+  /// Validates form, calls AuthProvider.register, navigates to HomeScreen on success.
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -64,6 +73,7 @@ class _RegisterScreenState extends State<RegisterScreen>
 
       if (!mounted) return;
 
+      // Clear navigation stack and go to home
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const HomeScreen()),
         (route) => false,
@@ -77,6 +87,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     }
   }
 
+  /// Displays a floating red snackbar with the given error message.
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -141,6 +152,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 
+  /// Back button with frosted-glass style container.
   Widget _buildBackButton() {
     return Align(
       alignment: Alignment.centerLeft,
@@ -165,6 +177,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 
+  /// App icon, "Create Account" title, and "Join us" subtitle.
   Widget _buildHeader() {
     return Column(
       children: [
@@ -216,6 +229,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 
+  /// Semi-transparent card containing the registration form fields and submit button.
   Widget _buildRegisterCard(bool loading) {
     return Container(
       padding: const EdgeInsets.all(28),
@@ -311,6 +325,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 
+  /// Reusable form field with label, hint, icon, and optional visibility toggle.
   Widget _buildField({
     required String label,
     required String hint,
@@ -378,6 +393,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 
+  /// Gradient "Create Account" button that shows a spinner while loading.
   Widget _buildRegisterButton(bool loading) {
     return Container(
       height: 54,
@@ -425,6 +441,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 
+  /// "Already have an account? Sign In" link that pops back to LoginScreen.
   Widget _buildLoginLink() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -445,6 +462,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 }
 
+/// Draws overlapping radial gradient circles for the register screen's background effect.
 class _BackgroundPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {

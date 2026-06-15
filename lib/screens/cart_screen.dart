@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_learn2/providers/cart_provider.dart';
 import 'package:flutter_learn2/services/api_service.dart';
 import 'package:flutter_learn2/theme/app_colors.dart';
 
@@ -10,70 +12,41 @@ class CartScreen extends StatefulWidget {
 }
 
 class _CartScreenState extends State<CartScreen> {
-  List<dynamic> _items = [];
-  bool _loading = true;
   bool _checkingOut = false;
 
   @override
   void initState() {
     super.initState();
-    _fetchCart();
-  }
-
-  Future<void> _fetchCart() async {
-    try {
-      final items = await ApiService.getCart();
-      if (mounted) setState(() => _items = items);
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to load cart'),
-            backgroundColor: AppColors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
+    context.read<CartProvider>().fetchCart();
   }
 
   Future<void> _checkout() async {
     setState(() => _checkingOut = true);
     try {
-      await ApiService.placeOrder();
+      await context.read<CartProvider>().placeOrder();
       if (!mounted) return;
-      setState(() {
-        _items = [];
-        _checkingOut = false;
-      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Order placed successfully!'),
           backgroundColor: AppColors.amberGlow,
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(16),
         ),
       );
       Navigator.pop(context);
     } on ApiException catch (e) {
       if (!mounted) return;
-      setState(() => _checkingOut = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.message),
           backgroundColor: AppColors.red,
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          margin: const EdgeInsets.all(16),
         ),
       );
     } catch (_) {
       if (!mounted) return;
-      setState(() => _checkingOut = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Checkout failed'),
@@ -81,54 +54,16 @@ class _CartScreenState extends State<CartScreen> {
           behavior: SnackBarBehavior.floating,
         ),
       );
+    } finally {
+      if (mounted) setState(() => _checkingOut = false);
     }
-  }
-
-  Future<void> _updateQuantity(int cartItemId, int newQty) async {
-    try {
-      await ApiService.updateCartItem(cartItemId, newQty);
-      await _fetchCart();
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to update quantity'),
-            backgroundColor: AppColors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _removeItem(int cartItemId) async {
-    try {
-      await ApiService.removeFromCart(cartItemId);
-      await _fetchCart();
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to remove item'),
-            backgroundColor: AppColors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  double get _total {
-    double total = 0;
-    for (final item in _items) {
-      final product = item['product'] as Map<String, dynamic>?;
-      final qty = (item['quantity'] as int?) ?? 0;
-      final price = double.tryParse(product?['price']?.toString() ?? '0') ?? 0;
-      total += price * qty;
-    }
-    return total;
   }
 
   @override
   Widget build(BuildContext context) {
+    final cart = context.watch<CartProvider>();
+    final items = cart.items;
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -146,17 +81,18 @@ class _CartScreenState extends State<CartScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              _buildTopBar(),
+              _buildTopBar(items.length),
               Expanded(
-                child: _loading
+                child: cart.loading
                     ? const Center(
                         child: CircularProgressIndicator(
                             color: AppColors.amberGlow))
-                    : _items.isEmpty
+                    : items.isEmpty
                         ? _buildEmptyCart()
-                        : _buildCartList(),
+                        : _buildCartList(items),
               ),
-              if (!_loading && _items.isNotEmpty) _buildBottomBar(),
+              if (!cart.loading && items.isNotEmpty)
+                _buildBottomBar(cart.total),
             ],
           ),
         ),
@@ -164,7 +100,7 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  Widget _buildTopBar() {
+  Widget _buildTopBar(int itemCount) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       child: Row(
@@ -187,11 +123,9 @@ class _CartScreenState extends State<CartScreen> {
           ),
           const Spacer(),
           Text(
-            '${_items.length} ${_items.length == 1 ? 'item' : 'items'}',
-            style: TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 14,
-            ),
+            '$itemCount ${itemCount == 1 ? 'item' : 'items'}',
+            style:
+                TextStyle(color: AppColors.textSecondary, fontSize: 14),
           ),
         ],
       ),
@@ -230,13 +164,11 @@ class _CartScreenState extends State<CartScreen> {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: Colors.white.withValues(alpha: 0.06),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+              border:
+                  Border.all(color: Colors.white.withValues(alpha: 0.1)),
             ),
-            child: Icon(
-              Icons.shopping_cart_outlined,
-              size: 44,
-              color: AppColors.textSecondary,
-            ),
+            child: Icon(Icons.shopping_cart_outlined,
+                size: 44, color: AppColors.textSecondary),
           ),
           const SizedBox(height: 24),
           Text(
@@ -250,22 +182,20 @@ class _CartScreenState extends State<CartScreen> {
           const SizedBox(height: 8),
           Text(
             'Add some groceries to get started',
-            style: TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 14,
-            ),
+            style:
+                TextStyle(color: AppColors.textSecondary, fontSize: 14),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCartList() {
+  Widget _buildCartList(List<dynamic> items) {
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      itemCount: _items.length,
+      itemCount: items.length,
       separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (context, index) => _buildCartItem(_items[index]),
+      itemBuilder: (context, index) => _buildCartItem(items[index]),
     );
   }
 
@@ -274,7 +204,8 @@ class _CartScreenState extends State<CartScreen> {
     final product = item['product'] as Map<String, dynamic>? ?? {};
     final name = product['name'] as String? ?? '';
     final image = product['image'] as String?;
-    final price = double.tryParse(product['price']?.toString() ?? '0') ?? 0;
+    final price =
+        double.tryParse(product['price']?.toString() ?? '0') ?? 0;
     final unit = product['unit'] as String? ?? 'piece';
     final quantity = (item['quantity'] as int?) ?? 1;
 
@@ -302,7 +233,8 @@ class _CartScreenState extends State<CartScreen> {
                       fit: BoxFit.cover,
                       errorBuilder: (_, _, _) => Icon(
                         Icons.eco_rounded,
-                        color: AppColors.amberGlow.withValues(alpha: 0.4),
+                        color:
+                            AppColors.amberGlow.withValues(alpha: 0.4),
                       ),
                     ),
                   )
@@ -330,8 +262,12 @@ class _CartScreenState extends State<CartScreen> {
                 Row(
                   children: [
                     ShaderMask(
-                      shaderCallback: (bounds) => const LinearGradient(
-                        colors: [AppColors.brightAmber, AppColors.sunbeamYellow],
+                      shaderCallback: (bounds) =>
+                          const LinearGradient(
+                        colors: [
+                          AppColors.brightAmber,
+                          AppColors.sunbeamYellow,
+                        ],
                       ).createShader(bounds),
                       child: Text(
                         'R${price.toStringAsFixed(2)}',
@@ -365,6 +301,8 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Widget _buildQuantityControls(int cartItemId, int quantity) {
+    final cart = context.read<CartProvider>();
+
     return Container(
       height: 36,
       decoration: BoxDecoration(
@@ -376,7 +314,9 @@ class _CartScreenState extends State<CartScreen> {
         children: [
           _smallButton(
             Icons.remove_rounded,
-            quantity > 1 ? () => _updateQuantity(cartItemId, quantity - 1) : null,
+            quantity > 1
+                ? () => cart.updateQuantity(cartItemId, quantity - 1)
+                : null,
           ),
           SizedBox(
             width: 30,
@@ -392,7 +332,7 @@ class _CartScreenState extends State<CartScreen> {
           ),
           _smallButton(
             Icons.add_rounded,
-            () => _updateQuantity(cartItemId, quantity + 1),
+            () => cart.updateQuantity(cartItemId, quantity + 1),
           ),
         ],
       ),
@@ -411,7 +351,9 @@ class _CartScreenState extends State<CartScreen> {
           alignment: Alignment.center,
           child: Icon(
             icon,
-            color: onTap != null ? AppColors.amberGlow : AppColors.textSecondary,
+            color: onTap != null
+                ? AppColors.amberGlow
+                : AppColors.textSecondary,
             size: 16,
           ),
         ),
@@ -432,7 +374,8 @@ class _CartScreenState extends State<CartScreen> {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(10),
-          onTap: () => _removeItem(cartItemId),
+          onTap: () =>
+              context.read<CartProvider>().removeItem(cartItemId),
           child: const Icon(
             Icons.delete_outline_rounded,
             color: AppColors.red,
@@ -443,13 +386,14 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  Widget _buildBottomBar() {
+  Widget _buildBottomBar(double total) {
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
       decoration: BoxDecoration(
         color: AppColors.backgroundDark.withValues(alpha: 0.95),
         border: Border(
-          top: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+          top:
+              BorderSide(color: Colors.white.withValues(alpha: 0.08)),
         ),
       ),
       child: Column(
@@ -458,19 +402,15 @@ class _CartScreenState extends State<CartScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Total',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 15,
-                ),
-              ),
+              Text('Total',
+                  style: TextStyle(
+                      color: AppColors.textSecondary, fontSize: 15)),
               ShaderMask(
                 shaderCallback: (bounds) => const LinearGradient(
                   colors: [AppColors.brightAmber, AppColors.sunbeamYellow],
                 ).createShader(bounds),
                 child: Text(
-                  'R${_total.toStringAsFixed(2)}',
+                  'R${total.toStringAsFixed(2)}',
                   style: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
@@ -500,7 +440,8 @@ class _CartScreenState extends State<CartScreen> {
                   ? []
                   : [
                       BoxShadow(
-                        color: AppColors.blazeOrange.withValues(alpha: 0.4),
+                        color:
+                            AppColors.blazeOrange.withValues(alpha: 0.4),
                         blurRadius: 16,
                         offset: const Offset(0, 4),
                       ),
@@ -523,12 +464,12 @@ class _CartScreenState extends State<CartScreen> {
                         )
                       : const Text(
                           'Checkout',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                 ),
               ),
             ),

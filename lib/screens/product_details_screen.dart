@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_learn2/providers/cart_provider.dart';
 import 'package:flutter_learn2/services/api_service.dart';
 import 'package:flutter_learn2/theme/app_colors.dart';
 
@@ -27,10 +29,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
-    _fadeAnim = CurvedAnimation(
-      parent: _animController,
-      curve: Curves.easeOut,
-    );
+    _fadeAnim =
+        CurvedAnimation(parent: _animController, curve: Curves.easeOut);
     _animController.forward();
     _fetchProduct();
   }
@@ -63,18 +63,17 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
   Future<void> _addToCart() async {
     setState(() => _addingToCart = true);
     try {
-      await ApiService.addToCart(
-        productId: widget.productId,
-        quantity: _quantity,
-      );
+      await context
+          .read<CartProvider>()
+          .addToCart(widget.productId, _quantity);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('$_quantity added to cart'),
           backgroundColor: AppColors.amberGlow,
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(16),
           duration: const Duration(seconds: 1),
         ),
@@ -86,8 +85,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
           content: Text(e.message),
           backgroundColor: AppColors.red,
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(16),
         ),
       );
@@ -114,8 +113,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
         ),
         child: _loading
             ? const Center(
-                child: CircularProgressIndicator(color: AppColors.amberGlow),
-              )
+                child: CircularProgressIndicator(
+                    color: AppColors.amberGlow))
             : FadeTransition(
                 opacity: _fadeAnim,
                 child: SafeArea(
@@ -216,7 +215,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            border:
+                Border.all(color: Colors.white.withValues(alpha: 0.08)),
           ),
           child: Stack(
             children: [
@@ -231,7 +231,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                           errorBuilder: (_, _, _) => Icon(
                             Icons.eco_rounded,
                             size: 80,
-                            color: AppColors.amberGlow.withValues(alpha: 0.5),
+                            color: AppColors.amberGlow
+                                .withValues(alpha: 0.5),
                           ),
                         ),
                       )
@@ -276,17 +277,15 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
       child: Text(
         text,
         style: TextStyle(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-        ),
+            color: color, fontSize: 11, fontWeight: FontWeight.w700),
       ),
     );
   }
 
   Widget _buildProductInfo() {
     final name = _product?['name'] as String? ?? '';
-    final price = double.tryParse(_product?['price']?.toString() ?? '0') ?? 0;
+    final price =
+        double.tryParse(_product?['price']?.toString() ?? '0') ?? 0;
     final unit = _product?['unit'] as String? ?? 'piece';
     final description = _product?['description'] as String? ?? '';
 
@@ -313,9 +312,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
           Text(
             'per $unit',
             style: TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 14,
-            ),
+                color: AppColors.textSecondary, fontSize: 14),
           ),
           const SizedBox(height: 20),
           Text(
@@ -352,7 +349,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
       decoration: BoxDecoration(
         color: AppColors.backgroundDark.withValues(alpha: 0.95),
         border: Border(
-          top: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+          top:
+              BorderSide(color: Colors.white.withValues(alpha: 0.08)),
         ),
       ),
       child: Row(
@@ -367,7 +365,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                 gradient: isOutOfStock
                     ? null
                     : const LinearGradient(
-                        colors: [AppColors.blazeOrange, AppColors.amberGlow],
+                        colors: [
+                          AppColors.blazeOrange,
+                          AppColors.amberGlow,
+                        ],
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                       ),
@@ -378,7 +379,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                     ? []
                     : [
                         BoxShadow(
-                          color: AppColors.blazeOrange.withValues(alpha: 0.4),
+                          color: AppColors.blazeOrange
+                              .withValues(alpha: 0.4),
                           blurRadius: 16,
                           offset: const Offset(0, 4),
                         ),
@@ -388,16 +390,15 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                 color: Colors.transparent,
                 child: InkWell(
                   borderRadius: BorderRadius.circular(16),
-                  onTap: isOutOfStock || _addingToCart ? null : _addToCart,
+                  onTap:
+                      isOutOfStock || _addingToCart ? null : _addToCart,
                   child: Center(
                     child: _addingToCart
                         ? const SizedBox(
                             width: 22,
                             height: 22,
                             child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
+                                strokeWidth: 2, color: Colors.white),
                           )
                         : Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -413,7 +414,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                isOutOfStock ? 'Out of Stock' : 'Add to Cart',
+                                isOutOfStock
+                                    ? 'Out of Stock'
+                                    : 'Add to Cart',
                                 style: TextStyle(
                                   color: isOutOfStock
                                       ? AppColors.textSecondary

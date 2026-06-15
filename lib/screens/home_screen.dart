@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_learn2/providers/auth_provider.dart';
+import 'package:flutter_learn2/providers/cart_provider.dart';
 import 'package:flutter_learn2/services/api_service.dart';
 import 'package:flutter_learn2/theme/app_colors.dart';
 import 'package:flutter_learn2/screens/login_screen.dart';
@@ -14,25 +17,21 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  Map<String, dynamic>? _user;
   List<dynamic> _categories = [];
   List<dynamic> _products = [];
   int? _selectedCategoryId;
   bool _loading = true;
   final _searchController = TextEditingController();
 
-  int _cartCount = 0;
-
   @override
   void initState() {
     super.initState();
     _loadData();
-    _fetchCartCount();
+    context.read<CartProvider>().fetchCart();
   }
 
   @override
   void dispose() {
-    // frees memory
     _searchController.dispose();
     super.dispose();
   }
@@ -40,7 +39,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadData() async {
     try {
       final results = await Future.wait([
-        ApiService.getUser(),
         ApiService.getCategories(),
         ApiService.getProducts(),
       ]);
@@ -48,16 +46,19 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
 
       setState(() {
-        _user = results[0] as Map<String, dynamic>;
-        _categories = results[1] as List<dynamic>;
-        final productsData = results[2] as Map<String, dynamic>;
+        _categories = results[0] as List<dynamic>;
+        final productsData = results[1] as Map<String, dynamic>;
         _products = productsData['data'] as List<dynamic>? ?? [];
+        _loading = false;
       });
     } catch (_) {
-      if (mounted) _logout();
-      return;
-    } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        context.read<AuthProvider>().logout();
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
+        );
+      }
     }
   }
 
@@ -84,11 +85,8 @@ class _HomeScreenState extends State<HomeScreen> {
     _fetchProducts(search: query);
   }
 
-  Future<void> _logout() async {
-    try {
-      await ApiService.logout();
-    } catch (_) {}
-    if (!mounted) return;
+  void _logout() {
+    context.read<AuthProvider>().logout();
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,
@@ -106,7 +104,6 @@ class _HomeScreenState extends State<HomeScreen> {
         transitionDuration: const Duration(milliseconds: 300),
       ),
     );
-    _fetchCartCount();
   }
 
   void _openCart() async {
@@ -118,7 +115,6 @@ class _HomeScreenState extends State<HomeScreen> {
         transitionDuration: const Duration(milliseconds: 300),
       ),
     );
-    _fetchCartCount();
   }
 
   void _openOrders() {
@@ -132,15 +128,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Future<void> _fetchCartCount() async {
-    try {
-      final items = await ApiService.getCart();
-      if (mounted) setState(() => _cartCount = items.length);
-    } catch (_) {}
-  }
-
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().user;
+    final cartCount = context.watch<CartProvider>().count;
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -158,19 +150,18 @@ class _HomeScreenState extends State<HomeScreen> {
         child: SafeArea(
           child: _loading
               ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.amberGlow),
+                  child:
+                      CircularProgressIndicator(color: AppColors.amberGlow),
                 )
               : Column(
                   children: [
-                    _buildTopBar(),
+                    _buildTopBar(user, cartCount),
                     const SizedBox(height: 16),
                     _buildSearchBar(),
                     const SizedBox(height: 20),
                     _buildCategoryChips(),
                     const SizedBox(height: 24),
-                    Expanded(
-                      child: _buildProductGrid(),
-                    ),
+                    Expanded(child: _buildProductGrid()),
                   ],
                 ),
         ),
@@ -178,7 +169,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildTopBar() {
+  Widget _buildTopBar(Map<String, dynamic>? user, int cartCount) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
@@ -216,18 +207,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               Text(
-                'Hello, ${(_user?['name'] as String? ?? '').split(' ').first}',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 12,
-                ),
+                'Hello, ${(user?['name'] as String? ?? '').split(' ').first}',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
               ),
             ],
           ),
           const Spacer(),
           _buildIconButton(Icons.receipt_long_outlined, _openOrders),
           const SizedBox(width: 8),
-          _buildCartButton(),
+          _buildCartButton(cartCount),
           const SizedBox(width: 8),
           _buildIconButton(Icons.logout_rounded, _logout),
         ],
@@ -235,7 +223,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildCartButton() {
+  Widget _buildCartButton(int count) {
     return GestureDetector(
       onTap: _openCart,
       child: Container(
@@ -253,7 +241,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Icon(Icons.shopping_cart_outlined,
                   color: AppColors.textSecondary, size: 20),
             ),
-            if (_cartCount > 0)
+            if (count > 0)
               Positioned(
                 top: -4,
                 right: -4,
@@ -268,7 +256,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   child: Center(
                     child: Text(
-                      _cartCount > 9 ? '9+' : '$_cartCount',
+                      count > 9 ? '9+' : '$count',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 10,
@@ -321,9 +309,7 @@ class _HomeScreenState extends State<HomeScreen> {
           decoration: InputDecoration(
             hintText: 'Search groceries...',
             hintStyle: TextStyle(
-              color: Colors.white.withValues(alpha: 0.25),
-              fontSize: 14,
-            ),
+                color: Colors.white.withValues(alpha: 0.25), fontSize: 14),
             prefixIcon: const Icon(Icons.search_rounded,
                 color: AppColors.textSecondary, size: 20),
             suffixIcon: _searchController.text.isNotEmpty
@@ -340,7 +326,7 @@ class _HomeScreenState extends State<HomeScreen> {
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           ),
-          onChanged: (v) => setState(() {}),
+          onChanged: (_) => setState(() {}),
         ),
       ),
     );
@@ -355,19 +341,17 @@ class _HomeScreenState extends State<HomeScreen> {
         itemCount: _categories.length + 1,
         separatorBuilder: (_, _) => const SizedBox(width: 10),
         itemBuilder: (context, index) {
-          if (index == 0) {
-            return _buildChip('All', null);
-          }
+          if (index == 0) return _buildChip('All', null);
           final cat = _categories[index - 1] as Map<String, dynamic>;
-          return _buildChip(cat['name'] as String? ?? '', cat['id'] as int?);
+          return _buildChip(
+              cat['name'] as String? ?? '', cat['id'] as int?);
         },
       ),
     );
   }
 
   Widget _buildChip(String label, int? categoryId) {
-    final isSelected =
-        categoryId == null && _selectedCategoryId == null ||
+    final isSelected = categoryId == null && _selectedCategoryId == null ||
         categoryId != null && categoryId == _selectedCategoryId;
 
     return GestureDetector(
@@ -384,7 +368,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   end: Alignment.centerRight,
                 )
               : null,
-          color: isSelected ? null : Colors.white.withValues(alpha: 0.06),
+          color:
+              isSelected ? null : Colors.white.withValues(alpha: 0.06),
           border: isSelected
               ? null
               : Border.all(color: Colors.white.withValues(alpha: 0.1)),
@@ -413,10 +398,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildProductGrid() {
     if (_products.isEmpty) {
       return Center(
-        child: Text(
-          'No products found',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 15),
-        ),
+        child: Text('No products found',
+            style:
+                TextStyle(color: AppColors.textSecondary, fontSize: 15)),
       );
     }
 
@@ -438,7 +422,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildProductCard(Map<String, dynamic> product) {
     final name = product['name'] as String? ?? '';
-    final price = double.tryParse(product['price']?.toString() ?? '0') ?? 0;
+    final price =
+        double.tryParse(product['price']?.toString() ?? '0') ?? 0;
     final unit = product['unit'] as String? ?? 'piece';
     final category = product['category'] as Map<String, dynamic>?;
 
@@ -459,30 +444,33 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Container(
                     decoration: BoxDecoration(
-                      borderRadius:
-                          const BorderRadius.vertical(top: Radius.circular(20)),
-                      color: AppColors.amberGlow.withValues(alpha: 0.08),
+                      borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(20)),
+                      color:
+                          AppColors.amberGlow.withValues(alpha: 0.08),
                     ),
                     clipBehavior: Clip.antiAlias,
                     child: product['image'] != null &&
                             (product['image'] as String).isNotEmpty
                         ? Image.network(
-                            ApiService.imageUrl(product['image'] as String),
+                            ApiService.imageUrl(
+                                product['image'] as String),
                             fit: BoxFit.cover,
                             width: double.infinity,
                             height: double.infinity,
                             errorBuilder: (_, _, _) => Icon(
                               Icons.eco_rounded,
                               size: 40,
-                              color:
-                                  AppColors.amberGlow.withValues(alpha: 0.4),
+                              color: AppColors.amberGlow
+                                  .withValues(alpha: 0.4),
                             ),
                           )
                         : Center(
                             child: Icon(
                               Icons.eco_rounded,
                               size: 40,
-                              color: AppColors.amberGlow.withValues(alpha: 0.4),
+                              color: AppColors.amberGlow
+                                  .withValues(alpha: 0.4),
                             ),
                           ),
                   ),
@@ -497,7 +485,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: AppColors.amberGlow,
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.amberGlow.withValues(alpha: 0.4),
+                            color:
+                                AppColors.amberGlow.withValues(alpha: 0.4),
                             blurRadius: 8,
                           ),
                         ],
@@ -512,7 +501,8 @@ class _HomeScreenState extends State<HomeScreen> {
             Expanded(
               flex: 3,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -542,8 +532,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         ShaderMask(
-                          shaderCallback: (bounds) => const LinearGradient(
-                            colors: [AppColors.brightAmber, AppColors.sunbeamYellow],
+                          shaderCallback: (bounds) =>
+                              const LinearGradient(
+                            colors: [
+                              AppColors.brightAmber,
+                              AppColors.sunbeamYellow,
+                            ],
                           ).createShader(bounds),
                           child: Text(
                             'R${price.toStringAsFixed(2)}',
@@ -571,5 +565,5 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
-  }  
+  }
 }

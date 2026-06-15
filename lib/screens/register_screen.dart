@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_learn2/theme/app_colors.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_learn2/providers/auth_provider.dart';
 import 'package:flutter_learn2/services/api_service.dart';
+import 'package:flutter_learn2/theme/app_colors.dart';
 import 'package:flutter_learn2/screens/home_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -19,7 +21,6 @@ class _RegisterScreenState extends State<RegisterScreen>
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
-  bool _loading = false;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -32,16 +33,12 @@ class _RegisterScreenState extends State<RegisterScreen>
       duration: const Duration(milliseconds: 1200),
     );
     _fadeAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOut,
-    );
+        parent: _animationController, curve: Curves.easeOut);
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
+    ).animate(
+        CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic));
     _animationController.forward();
   }
 
@@ -58,14 +55,12 @@ class _RegisterScreenState extends State<RegisterScreen>
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _loading = true);
-
     try {
-      await ApiService.register(
-        name: _nameController.text.trim(),
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
+      await context.read<AuthProvider>().register(
+            _nameController.text.trim(),
+            _emailController.text.trim(),
+            _passwordController.text,
+          );
 
       if (!mounted) return;
 
@@ -79,8 +74,6 @@ class _RegisterScreenState extends State<RegisterScreen>
     } catch (e) {
       if (!mounted) return;
       _showError('Could not connect to server');
-    } finally {
-      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -98,6 +91,8 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -115,10 +110,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         child: Stack(
           children: [
             Positioned.fill(
-              child: CustomPaint(
-                painter: _BackgroundPainter(),
-              ),
-            ),
+                child: CustomPaint(painter: _BackgroundPainter())),
             SafeArea(
               child: FadeTransition(
                 opacity: _fadeAnimation,
@@ -133,7 +125,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                         const SizedBox(height: 20),
                         _buildHeader(),
                         const SizedBox(height: 36),
-                        _buildRegisterCard(),
+                        _buildRegisterCard(auth.loading),
                         const SizedBox(height: 28),
                         _buildLoginLink(),
                         const SizedBox(height: 24),
@@ -158,20 +150,15 @@ class _RegisterScreenState extends State<RegisterScreen>
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.1),
-          ),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
         ),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(14),
             onTap: () => Navigator.pop(context),
-            child: const Icon(
-              Icons.arrow_back_rounded,
-              color: Colors.white,
-              size: 20,
-            ),
+            child: const Icon(Icons.arrow_back_rounded,
+                color: Colors.white, size: 20),
           ),
         ),
       ),
@@ -199,11 +186,8 @@ class _RegisterScreenState extends State<RegisterScreen>
               ),
             ],
           ),
-          child: const Icon(
-            Icons.person_add_rounded,
-            color: Colors.white,
-            size: 36,
-          ),
+          child: const Icon(Icons.person_add_rounded,
+              color: Colors.white, size: 36),
         ),
         const SizedBox(height: 20),
         ShaderMask(
@@ -224,31 +208,25 @@ class _RegisterScreenState extends State<RegisterScreen>
         Text(
           'Join us and get started',
           style: TextStyle(
-            fontSize: 15,
-            color: AppColors.textSecondary,
-            letterSpacing: 0.2,
-          ),
+              fontSize: 15,
+              color: AppColors.textSecondary,
+              letterSpacing: 0.2),
         ),
       ],
     );
   }
 
-  Widget _buildRegisterCard() {
+  Widget _buildRegisterCard(bool loading) {
     return Container(
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.1),
-          width: 1,
-        ),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.amberGlow.withValues(alpha: 0.08),
-            blurRadius: 40,
-            spreadRadius: 0,
-          ),
+              color: AppColors.amberGlow.withValues(alpha: 0.08),
+              blurRadius: 40),
         ],
       ),
       child: Form(
@@ -286,12 +264,11 @@ class _RegisterScreenState extends State<RegisterScreen>
               obscure: _obscurePassword,
               suffix: IconButton(
                 icon: Icon(
-                  _obscurePassword
-                      ? Icons.visibility_off_outlined
-                      : Icons.visibility_outlined,
-                  color: AppColors.textSecondary,
-                  size: 20,
-                ),
+                    _obscurePassword
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    color: AppColors.textSecondary,
+                    size: 20),
                 onPressed: () =>
                     setState(() => _obscurePassword = !_obscurePassword),
               ),
@@ -310,12 +287,11 @@ class _RegisterScreenState extends State<RegisterScreen>
               obscure: _obscureConfirm,
               suffix: IconButton(
                 icon: Icon(
-                  _obscureConfirm
-                      ? Icons.visibility_off_outlined
-                      : Icons.visibility_outlined,
-                  color: AppColors.textSecondary,
-                  size: 20,
-                ),
+                    _obscureConfirm
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    color: AppColors.textSecondary,
+                    size: 20),
                 onPressed: () =>
                     setState(() => _obscureConfirm = !_obscureConfirm),
               ),
@@ -328,7 +304,7 @@ class _RegisterScreenState extends State<RegisterScreen>
               },
             ),
             const SizedBox(height: 28),
-            _buildRegisterButton(),
+            _buildRegisterButton(loading),
           ],
         ),
       ),
@@ -348,15 +324,11 @@ class _RegisterScreenState extends State<RegisterScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.5,
-          ),
-        ),
+        Text(label,
+            style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+                fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
@@ -366,31 +338,28 @@ class _RegisterScreenState extends State<RegisterScreen>
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(
-              color: Colors.white.withValues(alpha: 0.25),
-              fontSize: 14,
-            ),
-            prefixIcon: Icon(icon, color: AppColors.textSecondary, size: 20),
+                color: Colors.white.withValues(alpha: 0.25), fontSize: 14),
+            prefixIcon:
+                Icon(icon, color: AppColors.textSecondary, size: 20),
             suffixIcon: suffix,
             filled: true,
             fillColor: Colors.white.withValues(alpha: 0.05),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16, vertical: 16),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(
-                color: Colors.white.withValues(alpha: 0.1),
-              ),
+              borderSide:
+                  BorderSide(color: Colors.white.withValues(alpha: 0.1)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(
-                color: Colors.white.withValues(alpha: 0.1),
-              ),
+              borderSide:
+                  BorderSide(color: Colors.white.withValues(alpha: 0.1)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide:
-                  const BorderSide(color: AppColors.amberGlow, width: 1.5),
+              borderSide: const BorderSide(
+                  color: AppColors.amberGlow, width: 1.5),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
@@ -398,7 +367,8 @@ class _RegisterScreenState extends State<RegisterScreen>
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.red, width: 1.5),
+              borderSide:
+                  const BorderSide(color: AppColors.red, width: 1.5),
             ),
             errorStyle: const TextStyle(color: AppColors.red, fontSize: 12),
           ),
@@ -408,20 +378,20 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 
-  Widget _buildRegisterButton() {
+  Widget _buildRegisterButton(bool loading) {
     return Container(
       height: 54,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        gradient: _loading
+        gradient: loading
             ? null
             : const LinearGradient(
                 colors: [AppColors.amberGlow, AppColors.brightAmber],
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
               ),
-        color: _loading ? Colors.white.withValues(alpha: 0.1) : null,
-        boxShadow: _loading
+        color: loading ? Colors.white.withValues(alpha: 0.1) : null,
+        boxShadow: loading
             ? []
             : [
                 BoxShadow(
@@ -435,26 +405,20 @@ class _RegisterScreenState extends State<RegisterScreen>
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
-          onTap: _loading ? null : _handleRegister,
+          onTap: loading ? null : _handleRegister,
           child: Center(
-            child: _loading
+            child: loading
                 ? const SizedBox(
                     width: 24,
                     height: 24,
                     child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      color: AppColors.brightAmber,
-                    ),
+                        strokeWidth: 2.5, color: AppColors.brightAmber),
                   )
-                : const Text(
-                    'Create Account',
+                : const Text('Create Account',
                     style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700)),
           ),
         ),
       ),
@@ -465,21 +429,16 @@ class _RegisterScreenState extends State<RegisterScreen>
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(
-          'Already have an account? ',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
-        ),
+        Text('Already have an account? ',
+            style:
+                TextStyle(color: AppColors.textSecondary, fontSize: 14)),
         GestureDetector(
           onTap: () => Navigator.pop(context),
-          child: const Text(
-            'Sign In',
-            style: TextStyle(
-              color: AppColors.brightAmber,
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.2,
-            ),
-          ),
+          child: const Text('Sign In',
+              style: TextStyle(
+                  color: AppColors.brightAmber,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700)),
         ),
       ],
     );
@@ -500,10 +459,7 @@ class _BackgroundPainter extends CustomPainter {
         radius: size.width * 0.7,
       ));
     canvas.drawCircle(
-      Offset(size.width * 0.9, size.height * 0.1),
-      size.width * 0.7,
-      paint1,
-    );
+        Offset(size.width * 0.9, size.height * 0.1), size.width * 0.7, paint1);
 
     final paint2 = Paint()
       ..shader = RadialGradient(
@@ -515,11 +471,8 @@ class _BackgroundPainter extends CustomPainter {
         center: Offset(size.width * 0.15, size.height * 0.75),
         radius: size.width * 0.55,
       ));
-    canvas.drawCircle(
-      Offset(size.width * 0.15, size.height * 0.75),
-      size.width * 0.55,
-      paint2,
-    );
+    canvas.drawCircle(Offset(size.width * 0.15, size.height * 0.75),
+        size.width * 0.55, paint2);
 
     final paint3 = Paint()
       ..shader = RadialGradient(
@@ -532,10 +485,7 @@ class _BackgroundPainter extends CustomPainter {
         radius: size.width * 0.4,
       ));
     canvas.drawCircle(
-      Offset(size.width * 0.5, size.height * 0.5),
-      size.width * 0.4,
-      paint3,
-    );
+        Offset(size.width * 0.5, size.height * 0.5), size.width * 0.4, paint3);
   }
 
   @override

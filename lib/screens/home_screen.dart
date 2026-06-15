@@ -171,8 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: SafeArea(
           child: _loading
               ? const Center(
-                  child:
-                      CircularProgressIndicator(color: AppColors.amberGlow),
+                  child: CircularProgressIndicator(color: AppColors.amberGlow),
                 )
               : Column(
                   children: [
@@ -207,8 +206,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 end: Alignment.bottomRight,
               ),
             ),
-            child: const Icon(Icons.shopping_bag_rounded,
-                color: Colors.white, size: 22),
+            child: const Icon(
+              Icons.shopping_bag_rounded,
+              color: Colors.white,
+              size: 22,
+            ),
           ),
           const SizedBox(width: 12),
           Column(
@@ -256,8 +258,11 @@ class _HomeScreenState extends State<HomeScreen> {
           clipBehavior: Clip.none,
           children: [
             const Center(
-              child: Icon(Icons.shopping_cart_outlined,
-                  color: AppColors.textSecondary, size: 20),
+              child: Icon(
+                Icons.shopping_cart_outlined,
+                color: AppColors.textSecondary,
+                size: 20,
+              ),
             ),
             if (count > 0)
               Positioned(
@@ -308,13 +313,21 @@ class _HomeScreenState extends State<HomeScreen> {
           decoration: InputDecoration(
             hintText: 'Search groceries...',
             hintStyle: TextStyle(
-                color: Colors.white.withValues(alpha: 0.25), fontSize: 14),
-            prefixIcon: const Icon(Icons.search_rounded,
-                color: AppColors.textSecondary, size: 20),
+              color: Colors.white.withValues(alpha: 0.25),
+              fontSize: 14,
+            ),
+            prefixIcon: const Icon(
+              Icons.search_rounded,
+              color: AppColors.textSecondary,
+              size: 20,
+            ),
             suffixIcon: _searchController.text.isNotEmpty
                 ? IconButton(
-                    icon: const Icon(Icons.close_rounded,
-                        color: AppColors.textSecondary, size: 18),
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: AppColors.textSecondary,
+                      size: 18,
+                    ),
                     onPressed: () {
                       _searchController.clear();
                       _onSearchSubmitted('');
@@ -322,8 +335,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   )
                 : null,
             border: InputBorder.none,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
           ),
           onChanged: (_) => setState(() {}),
         ),
@@ -351,7 +366,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Single category chip with animated gradient selection style.
   Widget _buildChip(String label, int? categoryId) {
-    final isSelected = categoryId == null && _selectedCategoryId == null ||
+    final isSelected =
+        categoryId == null && _selectedCategoryId == null ||
         categoryId != null && categoryId == _selectedCategoryId;
 
     return GestureDetector(
@@ -368,8 +384,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   end: Alignment.centerRight,
                 )
               : null,
-          color:
-              isSelected ? null : Colors.white.withValues(alpha: 0.06),
+          color: isSelected ? null : Colors.white.withValues(alpha: 0.06),
           border: isSelected
               ? null
               : Border.all(color: Colors.white.withValues(alpha: 0.1)),
@@ -399,8 +414,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildProductGrid() {
     if (_products.isEmpty) {
       return Center(
-        child: Text('No products found',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
+        child: Text(
+          'No products found',
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 15),
+        ),
       );
     }
 
@@ -437,13 +454,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   Container(
                     decoration: BoxDecoration(
                       borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(20)),
-                      color:
-                          AppColors.amberGlow.withValues(alpha: 0.08),
+                        top: Radius.circular(20),
+                      ),
+                      color: AppColors.amberGlow.withValues(alpha: 0.08),
                     ),
                     clipBehavior: Clip.antiAlias,
-                    child: product.image != null &&
-                            product.image!.isNotEmpty
+                    child: product.image != null && product.image!.isNotEmpty
                         ? Image.network(
                             ApiService.imageUrl(product.image!),
                             fit: BoxFit.cover,
@@ -452,24 +468,18 @@ class _HomeScreenState extends State<HomeScreen> {
                             errorBuilder: (_, _, _) => Icon(
                               Icons.eco_rounded,
                               size: 40,
-                              color: AppColors.amberGlow
-                                  .withValues(alpha: 0.4),
+                              color: AppColors.amberGlow.withValues(alpha: 0.4),
                             ),
                           )
                         : Center(
                             child: Icon(
                               Icons.eco_rounded,
                               size: 40,
-                              color: AppColors.amberGlow
-                                  .withValues(alpha: 0.4),
+                              color: AppColors.amberGlow.withValues(alpha: 0.4),
                             ),
                           ),
                   ),
-                  const Positioned(
-                    top: 8,
-                    right: 8,
-                    child: _AddButton(),
-                  ),
+                  const Positioned(top: 8, right: 8, child: _AddButton()),
                 ],
               ),
             ),
@@ -477,7 +487,9 @@ class _HomeScreenState extends State<HomeScreen> {
               flex: 3,
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 10),
+                  horizontal: 12,
+                  vertical: 10,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

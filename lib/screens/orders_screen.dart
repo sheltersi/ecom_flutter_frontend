@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_learn2/extensions/date_extension.dart';
+import 'package:flutter_learn2/models/order.dart';
 import 'package:flutter_learn2/services/api_service.dart';
 import 'package:flutter_learn2/theme/app_colors.dart';
 import 'package:flutter_learn2/screens/order_detail_screen.dart';
+import 'package:flutter_learn2/widgets/app_back_button.dart';
+import 'package:flutter_learn2/widgets/gradient_text.dart';
 
 /// Displays a scrollable list of past orders. Each card shows the order ID, status badge,
 /// up to 3 product previews, date, and total. Tapping a card opens the order detail screen.
@@ -13,7 +17,7 @@ class OrdersScreen extends StatefulWidget {
 }
 
 class _OrdersScreenState extends State<OrdersScreen> {
-  List<dynamic> _orders = [];
+  List<Order> _orders = [];
   bool _loading = true;
 
   @override
@@ -25,8 +29,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
   /// Fetches all orders from the API. Shows a red snackbar on failure.
   Future<void> _fetchOrders() async {
     try {
-      final orders = await ApiService.getOrders();
-      if (mounted) setState(() => _orders = orders);
+      final data = await ApiService.getOrders();
+      if (mounted) {
+        setState(() {
+          _orders = data
+              .map((o) => Order.fromJson(o as Map<String, dynamic>))
+              .toList();
+        });
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -83,45 +93,18 @@ class _OrdersScreenState extends State<OrdersScreen> {
       padding: const EdgeInsets.fromLTRB(16, 8, 20, 16),
       child: Row(
         children: [
-          _buildBackButton(),
+          const AppBackButton(),
           const SizedBox(width: 16),
-          ShaderMask(
-            shaderCallback: (bounds) => const LinearGradient(
-              colors: [AppColors.brightAmber, AppColors.sunbeamYellow],
-            ).createShader(bounds),
-            child: const Text(
-              'My Orders',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.3,
-              ),
+          const GradientText(
+            'My Orders',
+            colors: [AppColors.brightAmber, AppColors.sunbeamYellow],
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.3,
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  /// Frosted-glass back button that pops the current screen.
-  Widget _buildBackButton() {
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: () => Navigator.pop(context),
-          child: const Icon(Icons.arrow_back_rounded,
-              color: Colors.white, size: 20),
-        ),
       ),
     );
   }
@@ -178,21 +161,16 @@ class _OrdersScreenState extends State<OrdersScreen> {
     );
   }
 
-  /// Tappable order summary card: order ID, colored status badge, first 3 item previews, date, and gradient total.
-  Widget _buildOrderCard(dynamic order) {
-    final id = order['id'] as int? ?? 0;
-    final total = double.tryParse(order['total']?.toString() ?? '0') ?? 0;
-    final status = order['status'] as String? ?? 'pending';
-    final createdAt = order['created_at'] as String? ?? '';
-    final items = (order['items'] as List<dynamic>?) ?? [];
+  static const _statusColors = {
+    'pending': AppColors.amberGlow,
+    'confirmed': AppColors.brightAmber,
+    'delivered': AppColors.sunbeamYellow,
+    'cancelled': AppColors.red,
+  };
 
-    final statusColors = {
-      'pending': AppColors.amberGlow,
-      'confirmed': AppColors.brightAmber,
-      'delivered': AppColors.sunbeamYellow,
-      'cancelled': AppColors.red,
-    };
-    final statusColor = statusColors[status] ?? AppColors.textSecondary;
+  /// Tappable order summary card: order ID, colored status badge, first 3 item previews, date, and gradient total.
+  Widget _buildOrderCard(Order order) {
+    final statusColor = _statusColors[order.status] ?? AppColors.textSecondary;
 
     return Material(
       color: Colors.transparent,
@@ -201,7 +179,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
         onTap: () {
           Navigator.of(context).push(
             PageRouteBuilder(
-              pageBuilder: (_, _, _) => OrderDetailScreen(orderId: id),
+              pageBuilder: (_, _, _) => OrderDetailScreen(orderId: order.id),
               transitionsBuilder: (_, a, _, child) =>
                   FadeTransition(opacity: a, child: child),
               transitionDuration: const Duration(milliseconds: 300),
@@ -222,7 +200,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Order #$id',
+                    'Order #${order.id}',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 15,
@@ -239,7 +217,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                           color: statusColor.withValues(alpha: 0.3)),
                     ),
                     child: Text(
-                      status[0].toUpperCase() + status.substring(1),
+                      order.status[0].toUpperCase() + order.status.substring(1),
                       style: TextStyle(
                         color: statusColor,
                         fontSize: 11,
@@ -250,11 +228,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              ...items.take(3).map((item) {
-                final product =
-                    item['product'] as Map<String, dynamic>? ?? {};
-                final name = product['name'] as String? ?? '';
-                final qty = (item['quantity'] as int?) ?? 0;
+              ...order.items.take(3).map((item) {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 6),
                   child: Row(
@@ -277,13 +251,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          name,
+                          item.product.name,
                           style: const TextStyle(
                               color: Colors.white, fontSize: 13),
                         ),
                       ),
                       Text(
-                        'x$qty',
+                        'x${item.quantity}',
                         style: TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 13),
@@ -292,11 +266,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   ),
                 );
               }),
-              if (items.length > 3)
+              if (order.items.length > 3)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
-                    '+${items.length - 3} more items',
+                    '+${order.items.length - 3} more items',
                     style: TextStyle(
                         color: AppColors.brightAmber, fontSize: 12),
                   ),
@@ -311,24 +285,19 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    _formatDate(createdAt),
+                    order.createdAt.toFormattedDate(),
                     style: TextStyle(
                         color: AppColors.textSecondary, fontSize: 12),
                   ),
-                  ShaderMask(
-                    shaderCallback: (bounds) => const LinearGradient(
-                      colors: [
-                        AppColors.brightAmber,
-                        AppColors.sunbeamYellow,
-                      ],
-                    ).createShader(bounds),
-                    child: Text(
-                      'R${total.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
+                  GradientText(
+                    'R${order.total.toStringAsFixed(2)}',
+                    colors: const [
+                      AppColors.brightAmber,
+                      AppColors.sunbeamYellow,
+                    ],
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ],
@@ -338,19 +307,5 @@ class _OrdersScreenState extends State<OrdersScreen> {
         ),
       ),
     );
-  }
-
-  /// Converts an ISO-8601 string to a readable format like "14 Jun 2025".
-  String _formatDate(String iso) {
-    try {
-      final dt = DateTime.parse(iso);
-      final months = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-      ];
-      return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
-    } catch (_) {
-      return iso;
-    }
   }
 }

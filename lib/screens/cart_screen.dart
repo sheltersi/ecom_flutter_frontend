@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_learn2/models/cart_item.dart';
 import 'package:flutter_learn2/providers/cart_provider.dart';
 import 'package:flutter_learn2/services/api_service.dart';
 import 'package:flutter_learn2/theme/app_colors.dart';
+import 'package:flutter_learn2/widgets/app_back_button.dart';
+import 'package:flutter_learn2/widgets/gradient_text.dart';
 
 /// Shopping cart screen displaying cart items with quantity controls, remove buttons, totals, and a checkout action.
 class CartScreen extends StatefulWidget {
@@ -13,7 +16,7 @@ class CartScreen extends StatefulWidget {
 }
 
 class _CartScreenState extends State<CartScreen> {
-  bool _checkingOut = false; // Tracks checkout progress
+  bool _checkingOut = false;
 
   @override
   void initState() {
@@ -108,51 +111,23 @@ class _CartScreenState extends State<CartScreen> {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       child: Row(
         children: [
-          _buildBackButton(),
+          const AppBackButton(),
           const SizedBox(width: 16),
-          ShaderMask(
-            shaderCallback: (bounds) => const LinearGradient(
-              colors: [AppColors.brightAmber, AppColors.sunbeamYellow],
-            ).createShader(bounds),
-            child: const Text(
-              'My Cart',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.3,
-              ),
+          const GradientText(
+            'My Cart',
+            colors: [AppColors.brightAmber, AppColors.sunbeamYellow],
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.3,
             ),
           ),
           const Spacer(),
           Text(
             '$itemCount ${itemCount == 1 ? 'item' : 'items'}',
-            style:
-                TextStyle(color: AppColors.textSecondary, fontSize: 14),
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
           ),
         ],
-      ),
-    );
-  }
-
-  /// Frosted-glass back button that pops the current screen.
-  Widget _buildBackButton() {
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: () => Navigator.pop(context),
-          child: const Icon(Icons.arrow_back_rounded,
-              color: Colors.white, size: 20),
-        ),
       ),
     );
   }
@@ -196,7 +171,7 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   /// Scrollable list of cart items with separators.
-  Widget _buildCartList(List<dynamic> items) {
+  Widget _buildCartList(List<CartItem> items) {
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       itemCount: items.length,
@@ -206,15 +181,8 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   /// Single cart item row: image, name, gradient price, quantity controls, and remove button.
-  Widget _buildCartItem(dynamic item) {
-    final cartItemId = item['id'] as int;
-    final product = item['product'] as Map<String, dynamic>? ?? {};
-    final name = product['name'] as String? ?? '';
-    final image = product['image'] as String?;
-    final price =
-        double.tryParse(product['price']?.toString() ?? '0') ?? 0;
-    final unit = product['unit'] as String? ?? 'piece';
-    final quantity = (item['quantity'] as int?) ?? 1;
+  Widget _buildCartItem(CartItem item) {
+    final product = item.product;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -232,11 +200,11 @@ class _CartScreenState extends State<CartScreen> {
               borderRadius: BorderRadius.circular(14),
               color: AppColors.amberGlow.withValues(alpha: 0.1),
             ),
-            child: image != null && image.isNotEmpty
+            child: product.image != null && product.image!.isNotEmpty
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(14),
                     child: Image.network(
-                      ApiService.imageUrl(image),
+                      ApiService.imageUrl(product.image!),
                       fit: BoxFit.cover,
                       errorBuilder: (_, _, _) => Icon(
                         Icons.eco_rounded,
@@ -256,7 +224,7 @@ class _CartScreenState extends State<CartScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  name,
+                  product.name,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -268,26 +236,20 @@ class _CartScreenState extends State<CartScreen> {
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    ShaderMask(
-                      shaderCallback: (bounds) =>
-                          const LinearGradient(
-                        colors: [
-                          AppColors.brightAmber,
-                          AppColors.sunbeamYellow,
-                        ],
-                      ).createShader(bounds),
-                      child: Text(
-                        'R${price.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
+                    GradientText(
+                      'R${product.price.toStringAsFixed(2)}',
+                      colors: const [
+                        AppColors.brightAmber,
+                        AppColors.sunbeamYellow,
+                      ],
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '/$unit',
+                      '/${product.unit}',
                       style: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 11,
@@ -299,9 +261,9 @@ class _CartScreenState extends State<CartScreen> {
             ),
           ),
           const SizedBox(width: 10),
-          _buildQuantityControls(cartItemId, quantity),
+          _buildQuantityControls(item.id, item.quantity),
           const SizedBox(width: 8),
-          _buildRemoveButton(cartItemId),
+          _buildRemoveButton(item.id),
         ],
       ),
     );
@@ -416,17 +378,12 @@ class _CartScreenState extends State<CartScreen> {
               Text('Total',
                   style: TextStyle(
                       color: AppColors.textSecondary, fontSize: 15)),
-              ShaderMask(
-                shaderCallback: (bounds) => const LinearGradient(
-                  colors: [AppColors.brightAmber, AppColors.sunbeamYellow],
-                ).createShader(bounds),
-                child: Text(
-                  'R${total.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
+              GradientText(
+                'R${total.toStringAsFixed(2)}',
+                colors: const [AppColors.brightAmber, AppColors.sunbeamYellow],
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ],

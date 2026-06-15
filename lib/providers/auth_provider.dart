@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_learn2/models/user.dart';
 import 'package:flutter_learn2/services/api_service.dart';
 
 class AuthProvider extends ChangeNotifier {
-  Map<String, dynamic>? _user;
+  User? _user;
   bool _loading = false;
   String? _error;
 
-  Map<String, dynamic>? get user => _user;
+  User? get user => _user;
   bool get loading => _loading;
   String? get error => _error;
   bool get isLoggedIn => ApiService.isLoggedIn;
@@ -26,7 +27,10 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       final data = await ApiService.login(email: email, password: password);
-      _user = data['user'] as Map<String, dynamic>?;
+      _user = switch (data['user']) {
+        Map<String, dynamic> u => User.fromJson(u),
+        _ => null,
+      };
     } on ApiException catch (e) {
       _error = e.message;
       rethrow;
@@ -47,7 +51,10 @@ class AuthProvider extends ChangeNotifier {
         email: email,
         password: password,
       );
-      _user = data['user'] as Map<String, dynamic>?;
+      _user = switch (data['user']) {
+        Map<String, dynamic> u => User.fromJson(u),
+        _ => null,
+      };
     } on ApiException catch (e) {
       _error = e.message;
       rethrow;
@@ -68,7 +75,7 @@ class AuthProvider extends ChangeNotifier {
   Future<void> _fetchUser() async {
     try {
       final data = await ApiService.getUser();
-      _user = data;
+      _user = User.fromJson(data);
     } catch (_) {
       await ApiService.clearToken();
       _user = null;

@@ -4,6 +4,9 @@ import 'package:flutter_learn2/providers/auth_provider.dart';
 import 'package:flutter_learn2/services/api_service.dart';
 import 'package:flutter_learn2/theme/app_colors.dart';
 import 'package:flutter_learn2/screens/home_screen.dart';
+import 'package:flutter_learn2/widgets/ambient_background_painter.dart';
+import 'package:flutter_learn2/widgets/app_back_button.dart';
+import 'package:flutter_learn2/widgets/gradient_text.dart';
 
 /// Registration screen with name, email, password, and confirm-password fields,
 /// fade+slide entrance animation, and a custom radial-gradient background.
@@ -121,7 +124,13 @@ class _RegisterScreenState extends State<RegisterScreen>
         child: Stack(
           children: [
             Positioned.fill(
-                child: CustomPaint(painter: _BackgroundPainter())),
+                child: const CustomPaint(
+                  painter: AmbientBackgroundPainter(
+                    color1: Color(0x26FF9A00),
+                    color2: Color(0x1AFF5A00),
+                    color3: Color(0x0FFFE808),
+                  ),
+                )),
             SafeArea(
               child: FadeTransition(
                 opacity: _fadeAnimation,
@@ -132,7 +141,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                     child: Column(
                       children: [
                         const SizedBox(height: 40),
-                        _buildBackButton(),
+                        const AppBackButton(),
                         const SizedBox(height: 20),
                         _buildHeader(),
                         const SizedBox(height: 36),
@@ -147,31 +156,6 @@ class _RegisterScreenState extends State<RegisterScreen>
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  /// Back button with frosted-glass style container.
-  Widget _buildBackButton() {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(14),
-            onTap: () => Navigator.pop(context),
-            child: const Icon(Icons.arrow_back_rounded,
-                color: Colors.white, size: 20),
-          ),
         ),
       ),
     );
@@ -203,18 +187,13 @@ class _RegisterScreenState extends State<RegisterScreen>
               color: Colors.white, size: 36),
         ),
         const SizedBox(height: 20),
-        ShaderMask(
-          shaderCallback: (bounds) => const LinearGradient(
-            colors: [AppColors.brightAmber, AppColors.sunbeamYellow],
-          ).createShader(bounds),
-          child: const Text(
-            'Create Account',
-            style: TextStyle(
-              fontSize: 30,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-              letterSpacing: -0.5,
-            ),
+        const GradientText(
+          'Create Account',
+          colors: [AppColors.brightAmber, AppColors.sunbeamYellow],
+          style: TextStyle(
+            fontSize: 30,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
           ),
         ),
         const SizedBox(height: 6),
@@ -462,50 +441,3 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 }
 
-/// Draws overlapping radial gradient circles for the register screen's background effect.
-class _BackgroundPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint1 = Paint()
-      ..shader = RadialGradient(
-        colors: [
-          AppColors.amberGlow.withValues(alpha: 0.15),
-          Colors.transparent,
-        ],
-      ).createShader(Rect.fromCircle(
-        center: Offset(size.width * 0.9, size.height * 0.1),
-        radius: size.width * 0.7,
-      ));
-    canvas.drawCircle(
-        Offset(size.width * 0.9, size.height * 0.1), size.width * 0.7, paint1);
-
-    final paint2 = Paint()
-      ..shader = RadialGradient(
-        colors: [
-          AppColors.blazeOrange.withValues(alpha: 0.1),
-          Colors.transparent,
-        ],
-      ).createShader(Rect.fromCircle(
-        center: Offset(size.width * 0.15, size.height * 0.75),
-        radius: size.width * 0.55,
-      ));
-    canvas.drawCircle(Offset(size.width * 0.15, size.height * 0.75),
-        size.width * 0.55, paint2);
-
-    final paint3 = Paint()
-      ..shader = RadialGradient(
-        colors: [
-          AppColors.sunbeamYellow.withValues(alpha: 0.06),
-          Colors.transparent,
-        ],
-      ).createShader(Rect.fromCircle(
-        center: Offset(size.width * 0.5, size.height * 0.5),
-        radius: size.width * 0.4,
-      ));
-    canvas.drawCircle(
-        Offset(size.width * 0.5, size.height * 0.5), size.width * 0.4, paint3);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}

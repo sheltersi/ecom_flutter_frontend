@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_learn2/models/category.dart';
+import 'package:flutter_learn2/models/product.dart';
+import 'package:flutter_learn2/models/user.dart';
 import 'package:flutter_learn2/providers/auth_provider.dart';
 import 'package:flutter_learn2/providers/cart_provider.dart';
 import 'package:flutter_learn2/services/api_service.dart';
@@ -8,6 +11,8 @@ import 'package:flutter_learn2/screens/login_screen.dart';
 import 'package:flutter_learn2/screens/cart_screen.dart';
 import 'package:flutter_learn2/screens/orders_screen.dart';
 import 'package:flutter_learn2/screens/product_details_screen.dart';
+import 'package:flutter_learn2/widgets/app_icon_button.dart';
+import 'package:flutter_learn2/widgets/gradient_text.dart';
 
 /// Main product browsing screen with category chips, search bar, and a 2-column product grid.
 /// Also provides access to cart, orders, and logout via the top bar.
@@ -19,9 +24,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  List<dynamic> _categories = [];
-  List<dynamic> _products = [];
-  int? _selectedCategoryId; // null means "All"
+  List<Category> _categories = [];
+  List<Product> _products = [];
+  int? _selectedCategoryId;
   bool _loading = true;
   final _searchController = TextEditingController();
 
@@ -49,9 +54,14 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
 
       setState(() {
-        _categories = results[0] as List<dynamic>;
+        _categories = (results[0] as List<dynamic>)
+            .map((c) => Category.fromJson(c as Map<String, dynamic>))
+            .toList();
         final productsData = results[1] as Map<String, dynamic>;
-        _products = productsData['data'] as List<dynamic>? ?? [];
+        final rawProducts = productsData['data'] as List<dynamic>? ?? [];
+        _products = rawProducts
+            .map((p) => Product.fromJson(p as Map<String, dynamic>))
+            .toList();
         _loading = false;
       });
     } catch (_) {
@@ -73,7 +83,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     if (mounted) {
       setState(() {
-        _products = data['data'] as List<dynamic>? ?? [];
+        final rawProducts = data['data'] as List<dynamic>? ?? [];
+        _products = rawProducts
+            .map((p) => Product.fromJson(p as Map<String, dynamic>))
+            .toList();
       });
     }
   }
@@ -101,12 +114,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// Navigates to the product details screen with a fade transition.
-  void _openProduct(Map<String, dynamic> product) async {
-    final id = product['id'] as int?;
-    if (id == null) return;
+  void _openProduct(Product product) async {
     await Navigator.of(context).push(
       PageRouteBuilder(
-        pageBuilder: (_, _, _) => ProductDetailsScreen(productId: id),
+        pageBuilder: (_, _, _) => ProductDetailsScreen(productId: product.id),
         transitionsBuilder: (_, a, _, child) =>
             FadeTransition(opacity: a, child: child),
         transitionDuration: const Duration(milliseconds: 300),
@@ -180,7 +191,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// Top bar with app logo, greeting, orders button, cart badge, and logout button.
-  Widget _buildTopBar(Map<String, dynamic>? user, int cartCount) {
+  Widget _buildTopBar(User? user, int cartCount) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
@@ -203,32 +214,27 @@ class _HomeScreenState extends State<HomeScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ShaderMask(
-                shaderCallback: (bounds) => const LinearGradient(
-                  colors: [AppColors.brightAmber, AppColors.sunbeamYellow],
-                ).createShader(bounds),
-                child: const Text(
-                  'FreshCart',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.3,
-                  ),
+              const GradientText(
+                'FreshCart',
+                colors: [AppColors.brightAmber, AppColors.sunbeamYellow],
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.3,
                 ),
               ),
               Text(
-                'Hello, ${(user?['name'] as String? ?? '').split(' ').first}',
+                'Hello, ${(user?.name ?? '').split(' ').first}',
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
               ),
             ],
           ),
           const Spacer(),
-          _buildIconButton(Icons.receipt_long_outlined, _openOrders),
+          AppIconButton(icon: Icons.receipt_long_outlined, onTap: _openOrders),
           const SizedBox(width: 8),
           _buildCartButton(cartCount),
           const SizedBox(width: 8),
-          _buildIconButton(Icons.logout_rounded, _logout),
+          AppIconButton(icon: Icons.logout_rounded, onTap: _logout),
         ],
       ),
     );
@@ -279,27 +285,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
           ],
-        ),
-      ),
-    );
-  }
-
-  /// Reusable frosted-glass icon button.
-  Widget _buildIconButton(IconData icon, VoidCallback onTap) {
-    return Container(
-      width: 42,
-      height: 42,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(13),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(13),
-          onTap: onTap,
-          child: Icon(icon, color: AppColors.textSecondary, size: 20),
         ),
       ),
     );
@@ -357,9 +342,8 @@ class _HomeScreenState extends State<HomeScreen> {
         separatorBuilder: (_, _) => const SizedBox(width: 10),
         itemBuilder: (context, index) {
           if (index == 0) return _buildChip('All', null);
-          final cat = _categories[index - 1] as Map<String, dynamic>;
-          return _buildChip(
-              cat['name'] as String? ?? '', cat['id'] as int?);
+          final cat = _categories[index - 1];
+          return _buildChip(cat.name, cat.id);
         },
       ),
     );
@@ -416,8 +400,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_products.isEmpty) {
       return Center(
         child: Text('No products found',
-            style:
-                TextStyle(color: AppColors.textSecondary, fontSize: 15)),
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
       );
     }
 
@@ -430,21 +413,12 @@ class _HomeScreenState extends State<HomeScreen> {
         childAspectRatio: 0.72,
       ),
       itemCount: _products.length,
-      itemBuilder: (context, index) {
-        final product = _products[index] as Map<String, dynamic>;
-        return _buildProductCard(product);
-      },
+      itemBuilder: (context, index) => _buildProductCard(_products[index]),
     );
   }
 
   /// Individual product card with image, category label, name, and gradient-colored price.
-  Widget _buildProductCard(Map<String, dynamic> product) {
-    final name = product['name'] as String? ?? '';
-    final price =
-        double.tryParse(product['price']?.toString() ?? '0') ?? 0;
-    final unit = product['unit'] as String? ?? 'piece';
-    final category = product['category'] as Map<String, dynamic>?;
-
+  Widget _buildProductCard(Product product) {
     return GestureDetector(
       onTap: () => _openProduct(product),
       child: Container(
@@ -468,11 +442,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           AppColors.amberGlow.withValues(alpha: 0.08),
                     ),
                     clipBehavior: Clip.antiAlias,
-                    child: product['image'] != null &&
-                            (product['image'] as String).isNotEmpty
+                    child: product.image != null &&
+                            product.image!.isNotEmpty
                         ? Image.network(
-                            ApiService.imageUrl(
-                                product['image'] as String),
+                            ApiService.imageUrl(product.image!),
                             fit: BoxFit.cover,
                             width: double.infinity,
                             height: double.infinity,
@@ -492,26 +465,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                   ),
-                  Positioned(
+                  const Positioned(
                     top: 8,
                     right: 8,
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.amberGlow,
-                        boxShadow: [
-                          BoxShadow(
-                            color:
-                                AppColors.amberGlow.withValues(alpha: 0.4),
-                            blurRadius: 8,
-                          ),
-                        ],
-                      ),
-                      child: const Icon(Icons.add_rounded,
-                          color: Colors.white, size: 18),
-                    ),
+                    child: _AddButton(),
                   ),
                 ],
               ),
@@ -524,9 +481,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (category != null)
+                    if (product.category != null)
                       Text(
-                        category['name'] as String? ?? '',
+                        product.category!.name,
                         style: TextStyle(
                           color: AppColors.brightAmber,
                           fontSize: 10,
@@ -535,7 +492,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     const SizedBox(height: 2),
                     Text(
-                      name,
+                      product.name,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -549,25 +506,19 @@ class _HomeScreenState extends State<HomeScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        ShaderMask(
-                          shaderCallback: (bounds) =>
-                              const LinearGradient(
-                            colors: [
-                              AppColors.brightAmber,
-                              AppColors.sunbeamYellow,
-                            ],
-                          ).createShader(bounds),
-                          child: Text(
-                            'R${price.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                            ),
+                        GradientText(
+                          'R${product.price.toStringAsFixed(2)}',
+                          colors: const [
+                            AppColors.brightAmber,
+                            AppColors.sunbeamYellow,
+                          ],
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
                         Text(
-                          '/$unit',
+                          '/${product.unit}',
                           style: TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 10,
@@ -582,6 +533,30 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Small amber circular add button overlayed on product card images.
+class _AddButton extends StatelessWidget {
+  const _AddButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppColors.amberGlow,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.amberGlow.withValues(alpha: 0.4),
+            blurRadius: 8,
+          ),
+        ],
+      ),
+      child: const Icon(Icons.add_rounded, color: Colors.white, size: 18),
     );
   }
 }

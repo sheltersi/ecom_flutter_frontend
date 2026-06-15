@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_learn2/extensions/date_extension.dart';
+import 'package:flutter_learn2/models/order.dart';
+import 'package:flutter_learn2/models/order_item.dart';
 import 'package:flutter_learn2/services/api_service.dart';
 import 'package:flutter_learn2/theme/app_colors.dart';
+import 'package:flutter_learn2/widgets/app_back_button.dart';
+import 'package:flutter_learn2/widgets/gradient_text.dart';
 
 /// Detailed view of a single order: status card, item list with line totals, and an order summary section.
 /// Receives an [orderId] and fetches the order from the API.
@@ -14,7 +19,7 @@ class OrderDetailScreen extends StatefulWidget {
 }
 
 class _OrderDetailScreenState extends State<OrderDetailScreen> {
-  Map<String, dynamic>? _order;
+  Order? _order;
   bool _loading = true;
 
   @override
@@ -26,8 +31,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   /// Fetches a single order by [widget.orderId]. On error, shows a snackbar and pops back.
   Future<void> _fetchOrder() async {
     try {
-      final order = await ApiService.getOrder(widget.orderId);
-      if (mounted) setState(() => _order = order);
+      final data = await ApiService.getOrder(widget.orderId);
+      if (mounted) setState(() => _order = Order.fromJson(data));
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -92,12 +97,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   /// Top bar with back button and "Order #ID" title.
   Widget _buildTopBar() {
-    final id = _order?['id'] as int? ?? widget.orderId;
+    final id = _order?.id ?? widget.orderId;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 20, 16),
       child: Row(
         children: [
-          _backButton(),
+          const AppBackButton(),
           const SizedBox(width: 16),
           Text(
             'Order #$id',
@@ -112,47 +117,24 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
-  /// Frosted-glass back button that pops the current screen.
-  Widget _backButton() {
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: () => Navigator.pop(context),
-          child: const Icon(Icons.arrow_back_rounded,
-              color: Colors.white, size: 20),
-        ),
-      ),
-    );
-  }
+  static const _statusColors = {
+    'pending': AppColors.amberGlow,
+    'confirmed': AppColors.brightAmber,
+    'delivered': AppColors.sunbeamYellow,
+    'cancelled': AppColors.red,
+  };
+
+  static const _statusIcons = {
+    'pending': Icons.schedule_rounded,
+    'confirmed': Icons.check_circle_outline_rounded,
+    'delivered': Icons.local_shipping_rounded,
+    'cancelled': Icons.cancel_outlined,
+  };
 
   /// Status card showing a colored icon circle, the capitalized status text, and the formatted date.
   Widget _buildStatusCard() {
-    final status = _order?['status'] as String? ?? 'pending';
-    final createdAt = _order?['created_at'] as String? ?? '';
-
-    final statusColors = {
-      'pending': AppColors.amberGlow,
-      'confirmed': AppColors.brightAmber,
-      'delivered': AppColors.sunbeamYellow,
-      'cancelled': AppColors.red,
-    };
-    final statusColor = statusColors[status] ?? AppColors.textSecondary;
-
-    final statusIcons = {
-      'pending': Icons.schedule_rounded,
-      'confirmed': Icons.check_circle_outline_rounded,
-      'delivered': Icons.local_shipping_rounded,
-      'cancelled': Icons.cancel_outlined,
-    };
+    final order = _order!;
+    final statusColor = _statusColors[order.status] ?? AppColors.textSecondary;
 
     return Container(
       width: double.infinity,
@@ -174,14 +156,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   color: statusColor.withValues(alpha: 0.3), width: 2),
             ),
             child: Icon(
-              statusIcons[status] ?? Icons.receipt_long_rounded,
+              _statusIcons[order.status] ?? Icons.receipt_long_rounded,
               color: statusColor,
               size: 30,
             ),
           ),
           const SizedBox(height: 16),
           Text(
-            status[0].toUpperCase() + status.substring(1),
+            order.status[0].toUpperCase() + order.status.substring(1),
             style: TextStyle(
               color: statusColor,
               fontSize: 18,
@@ -190,7 +172,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            _formatDate(createdAt),
+            order.createdAt.toFormattedDateTime(),
             style: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 14,
@@ -203,7 +185,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   /// List of ordered items: image, name, unit price, quantity, and line total.
   Widget _buildItemsList() {
-    final items = (_order?['items'] as List<dynamic>?) ?? [];
+    final items = _order!.items;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -217,113 +199,100 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        ...items.map((item) {
-          final product = item['product'] as Map<String, dynamic>? ?? {};
-          final name = product['name'] as String? ?? '';
-          final image = product['image'] as String?;
-          final qty = (item['quantity'] as int?) ?? 0;
-          final price =
-              double.tryParse(item['price']?.toString() ?? '0') ?? 0;
-          final unit = product['unit'] as String? ?? 'piece';
+        ...items.map(_buildOrderItem),
+      ],
+    );
+  }
 
-          return Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(12),
+  Widget _buildOrderItem(OrderItem item) {
+    final product = item.product;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 52,
+            height: 52,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.04),
-              borderRadius: BorderRadius.circular(14),
-              border:
-                  Border.all(color: Colors.white.withValues(alpha: 0.06)),
+              borderRadius: BorderRadius.circular(12),
+              color: AppColors.amberGlow.withValues(alpha: 0.1),
             ),
-            child: Row(
-              children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
+            child: product.image != null && product.image!.isNotEmpty
+                ? ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    color: AppColors.amberGlow.withValues(alpha: 0.1),
-                  ),
-                  child: image != null && image.isNotEmpty
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.network(
-                            ApiService.imageUrl(image),
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => Icon(
-                              Icons.eco_rounded,
-                              color:
-                                  AppColors.amberGlow.withValues(alpha: 0.4),
-                            ),
-                          ),
-                        )
-                      : Icon(
-                          Icons.eco_rounded,
-                          color: AppColors.amberGlow.withValues(alpha: 0.4),
-                        ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    child: Image.network(
+                      ApiService.imageUrl(product.image!),
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => Icon(
+                        Icons.eco_rounded,
+                        color: AppColors.amberGlow.withValues(alpha: 0.4),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'R${price.toStringAsFixed(2)} / $unit',
-                        style: TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
+                    ),
+                  )
+                : Icon(
+                    Icons.eco_rounded,
+                    color: AppColors.amberGlow.withValues(alpha: 0.4),
                   ),
-                ),
-                const SizedBox(width: 12),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Text(
-                  'x$qty',
+                  product.name,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(width: 12),
-                ShaderMask(
-                  shaderCallback: (bounds) => const LinearGradient(
-                    colors: [AppColors.brightAmber, AppColors.sunbeamYellow],
-                  ).createShader(bounds),
-                  child: Text(
-                    'R${(price * qty).toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                    ),
+                const SizedBox(height: 4),
+                Text(
+                  'R${item.price.toStringAsFixed(2)} / ${product.unit}',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
                   ),
                 ),
               ],
             ),
-          );
-        }),
-      ],
+          ),
+          const SizedBox(width: 12),
+          Text(
+            'x${item.quantity}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(width: 12),
+          GradientText(
+            'R${item.lineTotal.toStringAsFixed(2)}',
+            colors: const [AppColors.brightAmber, AppColors.sunbeamYellow],
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   /// Order summary section: subtotal (with item count), free delivery, divider, and gradient total.
   Widget _buildSummaryCard() {
-    final total =
-        double.tryParse(_order?['total']?.toString() ?? '0') ?? 0;
-    final items = (_order?['items'] as List<dynamic>?) ?? [];
-    final itemCount = items.fold<int>(
-        0, (sum, item) => sum + ((item['quantity'] as int?) ?? 0));
+    final order = _order!;
+    final itemCount =
+        order.items.fold<int>(0, (sum, item) => sum + item.quantity);
 
     return Container(
       width: double.infinity,
@@ -336,7 +305,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       child: Column(
         children: [
           _summaryRow('Subtotal ($itemCount items)',
-              'R${total.toStringAsFixed(2)}'),
+              'R${order.total.toStringAsFixed(2)}'),
           const SizedBox(height: 8),
           _summaryRow('Delivery', 'Free'),
           const SizedBox(height: 14),
@@ -356,17 +325,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              ShaderMask(
-                shaderCallback: (bounds) => const LinearGradient(
-                  colors: [AppColors.brightAmber, AppColors.sunbeamYellow],
-                ).createShader(bounds),
-                child: Text(
-                  'R${total.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
+              GradientText(
+                'R${order.total.toStringAsFixed(2)}',
+                colors: const [AppColors.brightAmber, AppColors.sunbeamYellow],
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ],
@@ -391,19 +355,5 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         ),
       ],
     );
-  }
-
-  /// Converts an ISO-8601 string to a readable format like "14 Jun 2025 at 14:30".
-  String _formatDate(String iso) {
-    try {
-      final dt = DateTime.parse(iso);
-      final months = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-      ];
-      return '${dt.day} ${months[dt.month - 1]} ${dt.year} at ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    } catch (_) {
-      return iso;
-    }
   }
 }

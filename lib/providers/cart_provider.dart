@@ -1,20 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_learn2/models/cart_item.dart';
 import 'package:flutter_learn2/services/api_service.dart';
 
 class CartProvider extends ChangeNotifier {
-  List<dynamic> _items = [];
+  List<CartItem> _items = [];
   bool _loading = false;
 
-  List<dynamic> get items => _items;
+  List<CartItem> get items => _items;
   bool get loading => _loading;
-  int get count => _items.fold<int>(0, (sum, i) => sum + ((i['quantity'] as int?) ?? 0));
+  int get count => _items.fold<int>(0, (sum, i) => sum + i.quantity);
   double get total {
     double t = 0;
     for (final item in _items) {
-      final product = item['product'] as Map<String, dynamic>? ?? {};
-      final qty = (item['quantity'] as int?) ?? 0;
-      final price = double.tryParse(product['price']?.toString() ?? '0') ?? 0;
-      t += price * qty;
+      t += item.product.price * item.quantity;
     }
     return t;
   }
@@ -23,7 +21,10 @@ class CartProvider extends ChangeNotifier {
     _loading = true;
     notifyListeners();
     try {
-      _items = await ApiService.getCart();
+      final raw = await ApiService.getCart();
+      _items = raw
+          .map((i) => CartItem.fromJson(i as Map<String, dynamic>))
+          .toList();
     } catch (_) {}
     _loading = false;
     notifyListeners();

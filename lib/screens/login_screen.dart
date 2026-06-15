@@ -5,6 +5,8 @@ import 'package:flutter_learn2/services/api_service.dart';
 import 'package:flutter_learn2/theme/app_colors.dart';
 import 'package:flutter_learn2/screens/register_screen.dart';
 import 'package:flutter_learn2/screens/home_screen.dart';
+import 'package:flutter_learn2/widgets/ambient_background_painter.dart';
+import 'package:flutter_learn2/widgets/gradient_text.dart';
 
 /// Login screen with email/password form, fade+slide entrance animation, and a custom radial-gradient background.
 class LoginScreen extends StatefulWidget {
@@ -153,8 +155,14 @@ class _LoginScreenState extends State<LoginScreen>
 
   /// Renders the custom radial-gradient background behind the content.
   Widget _buildAnimatedBackground() {
-    return Positioned.fill(
-      child: CustomPaint(painter: _BackgroundPainter()),
+    return const Positioned.fill(
+      child: CustomPaint(
+        painter: AmbientBackgroundPainter(
+          color1: Color(0x26FF5A00),
+          color2: Color(0x1FFF9A00),
+          color3: Color(0x14FFE808),
+        ),
+      ),
     );
   }
 
@@ -184,18 +192,13 @@ class _LoginScreenState extends State<LoginScreen>
               const Icon(Icons.bolt_rounded, color: Colors.white, size: 40),
         ),
         const SizedBox(height: 24),
-        ShaderMask(
-          shaderCallback: (bounds) => const LinearGradient(
-            colors: [AppColors.brightAmber, AppColors.sunbeamYellow],
-          ).createShader(bounds),
-          child: const Text(
-            'Welcome Back',
-            style: TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
-              letterSpacing: -0.5,
-            ),
+        const GradientText(
+          'Welcome Back',
+          colors: [AppColors.brightAmber, AppColors.sunbeamYellow],
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
           ),
         ),
         const SizedBox(height: 8),
@@ -447,50 +450,3 @@ class _LoginScreenState extends State<LoginScreen>
   }
 }
 
-/// Draws overlapping radial gradient circles for the login screen's background effect.
-class _BackgroundPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint1 = Paint()
-      ..shader = RadialGradient(
-        colors: [
-          AppColors.blazeOrange.withValues(alpha: 0.15),
-          Colors.transparent,
-        ],
-      ).createShader(Rect.fromCircle(
-        center: Offset(size.width * 0.8, size.height * 0.15),
-        radius: size.width * 0.8,
-      ));
-    canvas.drawCircle(
-        Offset(size.width * 0.8, size.height * 0.15), size.width * 0.8, paint1);
-
-    final paint2 = Paint()
-      ..shader = RadialGradient(
-        colors: [
-          AppColors.amberGlow.withValues(alpha: 0.12),
-          Colors.transparent,
-        ],
-      ).createShader(Rect.fromCircle(
-        center: Offset(size.width * 0.1, size.height * 0.7),
-        radius: size.width * 0.6,
-      ));
-    canvas.drawCircle(
-        Offset(size.width * 0.1, size.height * 0.7), size.width * 0.6, paint2);
-
-    final paint3 = Paint()
-      ..shader = RadialGradient(
-        colors: [
-          AppColors.sunbeamYellow.withValues(alpha: 0.08),
-          Colors.transparent,
-        ],
-      ).createShader(Rect.fromCircle(
-        center: Offset(size.width * 0.5, size.height * 0.4),
-        radius: size.width * 0.5,
-      ));
-    canvas.drawCircle(
-        Offset(size.width * 0.5, size.height * 0.4), size.width * 0.5, paint3);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}

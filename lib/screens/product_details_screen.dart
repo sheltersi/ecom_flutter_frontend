@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_learn2/models/product.dart';
 import 'package:flutter_learn2/providers/cart_provider.dart';
 import 'package:flutter_learn2/services/api_service.dart';
 import 'package:flutter_learn2/theme/app_colors.dart';
+import 'package:flutter_learn2/widgets/app_back_button.dart';
+import 'package:flutter_learn2/widgets/app_icon_button.dart';
+import 'package:flutter_learn2/widgets/gradient_text.dart';
 
 /// Full product detail screen with image, price, description, quantity selector, and add-to-cart button.
 /// Receives a [productId] and fetches the product from the API.
@@ -17,7 +21,7 @@ class ProductDetailsScreen extends StatefulWidget {
 
 class _ProductDetailsScreenState extends State<ProductDetailsScreen>
     with SingleTickerProviderStateMixin {
-  Map<String, dynamic>? _product;
+  Product? _product;
   bool _loading = true;
   int _quantity = 1;
   bool _addingToCart = false;
@@ -51,7 +55,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
   Future<void> _fetchProduct() async {
     try {
       final data = await ApiService.getProduct(widget.productId);
-      if (mounted) setState(() => _product = data);
+      if (mounted) setState(() => _product = Product.fromJson(data));
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -152,66 +156,21 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
 
   /// Top bar with back button and share icon (share is a no-op placeholder).
   Widget _buildTopBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          _buildBackButton(),
-          const Spacer(),
-          _buildIconButton(Icons.share_outlined, () {}),
+          AppBackButton(),
+          Spacer(),
+          AppIconButton(icon: Icons.share_outlined),
         ],
-      ),
-    );
-  }
-
-  /// Frosted-glass back button that pops the current screen.
-  Widget _buildBackButton() {
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: () => Navigator.pop(context),
-          child: const Icon(Icons.arrow_back_rounded,
-              color: Colors.white, size: 20),
-        ),
-      ),
-    );
-  }
-
-  /// Reusable frosted-glass icon button.
-  Widget _buildIconButton(IconData icon, VoidCallback onTap) {
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: onTap,
-          child: Icon(icon, color: AppColors.textSecondary, size: 20),
-        ),
       ),
     );
   }
 
   /// Product image container with stock badge and category badge overlays.
   Widget _buildImageSection() {
-    final image = _product?['image'] as String?;
-    final stock = _product?['stock'] as int? ?? 0;
-    final category = _product?['category'] as Map<String, dynamic>?;
+    final product = _product!;
 
     return Column(
       children: [
@@ -234,11 +193,11 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
           child: Stack(
             children: [
               Center(
-                child: image != null && image.isNotEmpty
+                child: product.image != null && product.image!.isNotEmpty
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(28),
                         child: Image.network(
-                          ApiService.imageUrl(image),
+                          ApiService.imageUrl(product.image!),
                           fit: BoxFit.contain,
                           height: 180,
                           errorBuilder: (_, _, _) => Icon(
@@ -259,16 +218,16 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
                 top: 16,
                 left: 16,
                 child: _buildBadge(
-                  stock > 0 ? 'In Stock' : 'Out of Stock',
-                  stock > 0 ? AppColors.sunbeamYellow : AppColors.red,
+                  product.stock > 0 ? 'In Stock' : 'Out of Stock',
+                  product.stock > 0 ? AppColors.sunbeamYellow : AppColors.red,
                 ),
               ),
-              if (category != null)
+              if (product.category != null)
                 Positioned(
                   top: 16,
                   right: 16,
                   child: _buildBadge(
-                    category['name'] as String? ?? '',
+                    product.category!.name,
                     AppColors.brightAmber,
                   ),
                 ),
@@ -298,11 +257,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
 
   /// Gradient-styled price, unit label ("per piece"), product name, and description.
   Widget _buildProductInfo() {
-    final name = _product?['name'] as String? ?? '';
-    final price =
-        double.tryParse(_product?['price']?.toString() ?? '0') ?? 0;
-    final unit = _product?['unit'] as String? ?? 'piece';
-    final description = _product?['description'] as String? ?? '';
+    final product = _product!;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -310,28 +265,23 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 24),
-          ShaderMask(
-            shaderCallback: (bounds) => const LinearGradient(
-              colors: [AppColors.brightAmber, AppColors.sunbeamYellow],
-            ).createShader(bounds),
-            child: Text(
-              'R${price.toStringAsFixed(2)}',
-              style: const TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-              ),
+          GradientText(
+            'R${product.price.toStringAsFixed(2)}',
+            colors: const [AppColors.brightAmber, AppColors.sunbeamYellow],
+            style: const TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.w800,
             ),
           ),
           const SizedBox(height: 2),
           Text(
-            'per $unit',
+            'per ${product.unit}',
             style: TextStyle(
                 color: AppColors.textSecondary, fontSize: 14),
           ),
           const SizedBox(height: 20),
           Text(
-            name,
+            product.name,
             style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w700,
@@ -339,10 +289,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
               height: 1.2,
             ),
           ),
-          if (description.isNotEmpty) ...[
+          if (product.description != null && product.description!.isNotEmpty) ...[
             const SizedBox(height: 16),
             Text(
-              description,
+              product.description!,
               style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 14,
@@ -358,8 +308,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen>
   /// Sticky bottom bar with quantity selector and gradient add-to-cart button.
   /// Disabled state shown when the item is out of stock or while adding.
   Widget _buildBottomBar() {
-    final stock = _product?['stock'] as int? ?? 0;
-    final isOutOfStock = stock <= 0;
+    final product = _product!;
+    final isOutOfStock = product.stock <= 0;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),

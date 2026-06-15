@@ -3,6 +3,7 @@ import 'package:flutter_learn2/services/api_service.dart';
 import 'package:flutter_learn2/theme/app_colors.dart';
 import 'package:flutter_learn2/screens/login_screen.dart';
 import 'package:flutter_learn2/screens/cart_screen.dart';
+import 'package:flutter_learn2/screens/orders_screen.dart';
 import 'package:flutter_learn2/screens/product_details_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -31,6 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    // frees memory
     _searchController.dispose();
     super.dispose();
   }
@@ -117,6 +119,17 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
     _fetchCartCount();
+  }
+
+  void _openOrders() {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (_, _, _) => const OrdersScreen(),
+        transitionsBuilder: (_, a, _, child) =>
+            FadeTransition(opacity: a, child: child),
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    );
   }
 
   Future<void> _fetchCartCount() async {
@@ -212,6 +225,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const Spacer(),
+          _buildIconButton(Icons.receipt_long_outlined, _openOrders),
+          const SizedBox(width: 8),
           _buildCartButton(),
           const SizedBox(width: 8),
           _buildIconButton(Icons.logout_rounded, _logout),
@@ -556,5 +571,5 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
-  }
+  }  
 }

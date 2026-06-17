@@ -6,8 +6,7 @@ import 'package:flutter_learn2/theme/app_colors.dart';
 import 'package:flutter_learn2/screens/register_screen.dart';
 import 'package:flutter_learn2/screens/home_screen.dart';
 import 'package:flutter_learn2/widgets/ambient_background_painter.dart';
-import 'package:flutter_learn2/widgets/gradient_text.dart';
-import 'package:flutter_learn2/widgets/auth_header.dart';
+import 'package:flutter_learn2/widgets/login_header.dart';
 import 'package:flutter_learn2/widgets/login_form.dart';
 
 /// Login screen with email/password form, fade+slide entrance animation, and a custom radial-gradient background.
@@ -24,9 +23,6 @@ class _LoginScreenState extends State<LoginScreen>
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-
-  // Toggle password visibility
-  bool _obscurePassword = true;
 
   // Entrance animations (fade + slide up)
   late AnimationController _animationController;
@@ -61,10 +57,6 @@ class _LoginScreenState extends State<LoginScreen>
     _passwordController.dispose();
     _animationController.dispose();
     super.dispose();
-  }
-
-  void _togglePassword() {
-    setState(() => _obscurePassword = !_obscurePassword);
   }
 
   /// Validates the form, calls the AuthProvider to log in, then navigates to HomeScreen on success.
@@ -180,7 +172,7 @@ class _LoginScreenState extends State<LoginScreen>
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          "Don't have an account? ",
+          "Don't have an iaccount? ",
           style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
         ),
         GestureDetector(

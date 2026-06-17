@@ -5,10 +5,12 @@ import 'package:flutter_learn2/services/api_service.dart';
 class AuthProvider extends ChangeNotifier {
   User? _user;
   bool _loading = false;
+  bool _initializing = true;
   String? _error;
 
   User? get user => _user;
   bool get loading => _loading;
+  bool get initializing => _initializing;
   String? get error => _error;
   bool get isLoggedIn => ApiService.isLoggedIn;
 
@@ -17,6 +19,7 @@ class AuthProvider extends ChangeNotifier {
     if (ApiService.isLoggedIn) {
       await _fetchUser();
     }
+    _initializing = false;
     notifyListeners();
   }
 

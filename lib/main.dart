@@ -73,7 +73,7 @@ class MyApp extends StatelessWidget {
         ),
         home: Consumer<AuthProvider>(
           builder: (_, auth, _) {
-            if (auth.loading && auth.user == null) {
+            if (auth.initializing) {
               return const Scaffold(
                 body: Center(
                   child: CircularProgressIndicator(color: AppColors.amberGlow),
